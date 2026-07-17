@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>桃園機場貨運航班儀表板</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   基礎
+   ============================================================ */
+:root{
+  --bg:#f5f6f8; --card:#fff; --ink:#1c1f23; --ink2:#5b6470; --ink3:#8b95a3;
+  --line:#e3e7ec; --line2:#f0f2f5;
+  --dep:#2563eb;      /* 起飛 */
+  --arr:#ea8c00;      /* 降落 */
+  --cargo:#0f766e;    /* 貨運 */
+  --pax:#7c5cd6;      /* 客運 */
+  --other:#9aa4b2;    /* 「其他」統一灰 */
+  --warn:#b45309; --danger:#c2410c;
+  --r:10px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font:18px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  background:var(--bg); color:var(--ink);
+  padding-bottom:calc(24px + var(--safe-b));
+}
+h2{font-size:21px;font-weight:650;letter-spacing:.01em}
+h3{font-size:18px;font-weight:650}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+table{border-collapse:collapse}
+
+/* ============================================================
+   頁首 + 頁籤導覽
+   ============================================================ */
+header{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.94); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.hd{display:flex;align-items:baseline;gap:8px;padding:10px 14px 8px;flex-wrap:wrap}
+.hd h1{font-size:20px;font-weight:700;letter-spacing:.01em}
+.hd .sub{font-size:15px;color:var(--ink3)}
+nav{display:flex;gap:2px;overflow-x:auto;padding:0 8px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  flex:0 0 auto; padding:9px 12px; font-size:17px; color:var(--ink2);
+  border-bottom:2px solid transparent; white-space:nowrap; font-weight:500;
+}
+nav button[aria-selected="true"]{color:var(--dep);border-bottom-color:var(--dep);font-weight:650}
+
+/* ============================================================
+   版面
+   ============================================================ */
+main{padding:12px;max-width:1180px;margin:0 auto}
+.panel{display:none}
+.panel.on{display:block}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  padding:14px; margin-bottom:12px;
+}
+.card>header{position:static;background:none;border:none;backdrop-filter:none;padding:0;margin-bottom:10px}
+.ctitle{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.chint{font-size:15px;color:var(--ink3);line-height:1.5}
+/* 圖下方的備註 */
+.cnote{font-size:15px;color:var(--ink3);line-height:1.5;margin-top:9px}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:860px){.grid2{grid-template-columns:1fr 1fr}}
+
+/* ============================================================
+   控制項
+   ============================================================ */
+.ctrls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fafbfc}
+.seg button{padding:7px 13px;font-size:16px;color:var(--ink2);border-right:1px solid var(--line);
+  white-space:nowrap}
+.seg button:last-child{border-right:none}
+.seg button[aria-pressed="true"]{background:var(--dep);color:#fff;font-weight:600}
+select{
+  font:inherit;font-size:16px;padding:7px 30px 7px 10px;border:1px solid var(--line);
+  border-radius:8px;background:#fafbfc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b95a3'/%3E%3C/svg%3E") no-repeat right 10px center;
+  -webkit-appearance:none;appearance:none;max-width:100%;
+}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:16px;color:var(--ink2);cursor:pointer;user-select:none}
+.chk input{width:18px;height:18px;accent-color:var(--dep)}
+
+/* ============================================================
+   圖表容器
+   ============================================================ */
+.chart{width:100%;overflow:hidden}
+.chart svg{display:block;max-width:100%}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scrolly{overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* 圖例一律置於圖的上方 */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 8px;font-size:15px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:2px;display:inline-block;flex:0 0 auto}
+
+/* ============================================================
+   KPI
+   ============================================================ */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.kpi{background:#fafbfc;border:1px solid var(--line2);border-radius:8px;padding:10px 11px}
+.kpi .k{font-size:14px;color:var(--ink3);line-height:1.35;margin-bottom:3px}
+.kpi .v{font-size:25px;font-weight:680;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  overflow-wrap:anywhere;line-height:1.2}
+/* 並列尖峰（如「0、13、23時」）字串較長，縮一級以免撐破卡片 */
+.kpi .v.long{font-size:19px}
+.kpi .u{font-size:15px;font-weight:500;color:var(--ink3);margin-left:2px}
+
+/* 3-1 雙欄對照 */
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dual .col{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dual .ch{padding:8px 11px;font-size:15px;font-weight:650;border-bottom:1px solid var(--line)}
+.dual .col.norm .ch{background:#eef4ff;color:#1e40af}
+.dual .col.all  .ch{background:#fff5ec;color:#9a3412}
+.dual .row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line2);font-size:15px}
+.dual .row:last-child{border-bottom:none}
+.dual .row .k{white-space:nowrap}
+/* 母體不同的指標另起區塊，避免被誤讀為與上方共用分母 */
+.dual .sh{padding:8px 10px 6px;font-size:14px;font-weight:650;color:var(--ink2);
+  background:#f7f8fa;border-top:2px solid var(--line);border-bottom:1px solid var(--line2);line-height:1.4}
+.dual .sh:first-child{border-top:none}
+.dual .row .k{color:var(--ink2);flex:1;min-width:0}
+.dual .row .v{font-weight:670;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ============================================================
+   表格
+   ============================================================ */
+.tbl{width:100%;font-size:16px}
+.tbl th,.tbl td{padding:7px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line2)}
+.tbl th:first-child,.tbl td:first-child,
+.tbl th.l,.tbl td.l{text-align:left}
+.tbl thead th{
+  position:sticky;top:0;z-index:2;background:#fafbfc;
+  font-size:14px;font-weight:650;color:var(--ink2);
+  box-shadow:inset 0 -1px 0 var(--line);
+}
+.tbl td{font-variant-numeric:tabular-nums}
+.tbl tbody tr:hover{background:#fafbfc}
+/* 3-3：比例為主要資訊（大而深），架次為輔（小而淡） */
+.tbl .pri{font-size:17px;font-weight:670;color:var(--ink);display:block;line-height:1.25}
+.tbl .sec{font-size:13px;font-weight:400;color:var(--ink3);display:block;line-height:1.25}
+
+/* ============================================================
+   熱力圖
+   ============================================================ */
+.hmwrap{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:760px){.hmwrap{grid-template-columns:1fr 1fr}}
+.hm{width:100%;font-size:14px;table-layout:fixed}
+.hm caption{font-size:16px;font-weight:650;text-align:left;padding-bottom:6px}
+.hm th{font-weight:600;color:var(--ink2);font-size:13px;padding:3px 1px;line-height:1.25}
+.hm thead th{border-bottom:1px solid var(--line)}
+.hm td{
+  height:25px;text-align:center;font-variant-numeric:tabular-nums;
+  border:1px solid #fff;border-radius:2px;color:var(--ink);
+}
+.hm th.hr{text-align:right;padding-right:5px;color:var(--ink3);width:32px;font-variant-numeric:tabular-nums}
+/* 0 架：不上色，但數字仍須呈現 */
+.hm td.z{background:transparent;color:var(--ink3);font-weight:400}
+/* 該日不在統計母體內（未到達／當日未定稿）：整格留白 */
+.hm td.na{background:transparent;color:transparent}
+.hm td.d1{background:#dbeafe}
+.hm td.d2{background:#60a5fa;color:#fff}
+.hm td.d3{background:#1d4ed8;color:#fff}
+.hm.arr td.d1{background:#fde9c8}
+.hm.arr td.d2{background:#f0a94a;color:#fff}
+.hm.arr td.d3{background:#b45309;color:#fff}
+.hm td.dim{opacity:.22}
+.hm td.hl{outline:2px solid #111;outline-offset:-2px;font-weight:700}
+/* 熱力圖圖例置於圖的上方 */
+.hmkey{display:flex;gap:12px;align-items:center;font-size:15px;color:var(--ink2);margin:0 0 8px;flex-wrap:wrap}
+.hmkey span{display:inline-flex;align-items:center;gap:5px}
+.hmkey i{width:14px;height:14px;border-radius:2px;display:inline-block;border:1px solid var(--line)}
+.hmkey i.k0{background:transparent;border-style:dashed}
+.hmkey i.k1{background:#dbeafe}
+.hmkey i.k2{background:#60a5fa}
+.hmkey i.k3{background:#1d4ed8}
+
+/* ============================================================
+   雜項
+   ============================================================ */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  padding:6px 12px;border:1px solid var(--line);border-radius:16px;background:#fafbfc;
+  font-size:15px;font-variant-numeric:tabular-nums;color:var(--ink2);
+}
+.chip[aria-pressed="true"]{background:#111;color:#fff;border-color:#111;font-weight:600}
+.banner{
+  border-radius:8px;padding:10px 12px;font-size:16px;line-height:1.55;margin-bottom:10px;
+  border:1px solid; display:flex; gap:8px; align-items:flex-start;
+}
+.banner.warn{background:#fffbeb;border-color:#fde68a;color:#78350f}
+.banner.err{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.banner.info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+.banner b{font-weight:670}
+.empty{padding:26px 10px;text-align:center;color:var(--ink3);font-size:16px}
+.spin{padding:40px 10px;text-align:center;color:var(--ink3);font-size:16px}
+.spin::before{
+  content:"";display:block;width:20px;height:20px;margin:0 auto 10px;
+  border:2px solid var(--line);border-top-color:var(--dep);border-radius:50%;
+  animation:sp .7s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+.tag{font-size:13px;padding:2px 8px;border-radius:10px;background:var(--line2);color:var(--ink2);font-weight:600}
+.evt{color:var(--warn);font-weight:700}
+.foot{text-align:center;font-size:14px;color:var(--ink3);padding:10px;line-height:1.6}
+.banner-fixed{margin:12px 12px 0;max-width:1180px}
+@media(min-width:1204px){.banner-fixed{margin-left:auto;margin-right:auto}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd">
+    <h1>桃園機場貨運航班儀表板</h1>
+    <span class="sub" id="freshness">載入中…</span>
+  </div>
+  <nav id="nav" role="tablist">
+    <button role="tab" data-tab="t4" aria-selected="true">每日航班預報</button>
+    <button role="tab" data-tab="t1" aria-selected="false">起降架次統計</button>
+    <button role="tab" data-tab="t2" aria-selected="false">班表數據分析</button>
+    <button role="tab" data-tab="t3" aria-selected="false">貨機延遲分析</button>
+    <button role="tab" data-tab="t5" aria-selected="false">衍生貨量推估</button>
+  </nav>
+</header>
+
+<div id="boot" class="spin">正在讀取 Google Sheet…</div>
+<div id="fatal"></div>
+
+<main id="main" hidden>
+
+  <!-- ========================= 起降架次統計 ========================= -->
+  <section class="panel" id="t1">
+    <div class="card">
+      <div class="ctitle"><h2>每日分時起降架次</h2><span class="tag">實際起降</span></div>
+      <div class="ctrls">
+        <select id="t1-date"></select>
+        <div class="seg" id="t1-kind"></div>
+        <div class="seg" id="t1-dir"></div>
+        <label class="chk"><input type="checkbox" id="t1-avg"><span>顯示平均線</span></label>
+      </div>
+      <div id="t1-evt"></div>
+      <div class="legend" id="t1-legend"></div>
+      <div class="chart" id="t1-chart"></div>
+      <p class="cnote">平均線代表常態，已排除特殊日，預設關閉。</p>
+    </div>
+
+    <div class="card">
+      <div class="ctitle"><h2>每週每日架次</h2></div>
+      <div class="ctrls">
+        <select id="t1-week"></select>
+        <div class="seg" id="t1b-kind"></div>
+      </div>
+      <div class="legend" id="t1b-legend"></div>
+      <div class="chart" id="t1b-chart"></div>
+      <p class="cnote">⚠ 為特殊事件日。</p>
+    </div>
+
+    <div class="card">
+      <div class="ctitle"><h2>每週分時架次熱力圖</h2></div>
+      <div class="ctrls"><div class="seg" id="t1c-kind"></div></div>
+      <div class="hmkey" id="t1c-key"></div>
+      <div class="hmwrap" id="t1c-hm"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle"><h2>平均架次</h2><span class="tag">趨勢待穩定</span></div>
+      <p class="chint">週一至五平均分時、平均每日架次（排除特殊日）。</p>
+      <div id="t1d-body"></div>
+    </div>
+  </section>
+
+  <!-- ========================= 班表數據分析 ========================= -->
+  <section class="panel" id="t2">
+    <div class="card" style="padding-bottom:6px">
+      <div class="ctrls" style="margin:0 0 8px">
+        <div class="seg" id="t2-sub"></div>
+      </div>
+    </div>
+
+    <div id="t2-compose">
+      <div class="card">
+        <div class="ctrls" style="margin:0 0 8px">
+          <span style="font-size:16px;color:var(--ink2)">航班類型</span>
+          <div class="seg" id="t2-kind"></div>
+        </div>
+        <p class="chint" id="t2-pop"></p>
+      </div>
+      <div class="card">
+        <div class="ctitle"><h2>航空公司組成</h2></div>
+        <p class="chint">圓餅圖佔比 ≥3% 獨立呈現，&lt;3% 併入「其他」。</p>
+        <div class="grid2"><div id="t2-al-bar"></div><div id="t2-al-pie"></div></div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><h2>機型組成</h2></div>
+        <div class="grid2"><div id="t2-ac-bar"></div><div id="t2-ac-pie"></div></div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><h2>目的地分佈</h2><span class="tag">起飛 · ArrivalAirport</span></div>
+        <p class="chint">同一機場代碼在「目的地」與「來源地」兩圖使用相同顏色，便於對照進出口差異。</p>
+        <div class="grid2"><div id="t2-dst-bar"></div><div id="t2-dst-pie"></div></div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><h2>來源地分佈</h2><span class="tag">降落 · DepartureAirport</span></div>
+        <div class="grid2"><div id="t2-src-bar"></div><div id="t2-src-pie"></div></div>
+      </div>
+    </div>
+
+    <div id="t2-airline" hidden>
+      <div class="card">
+        <div class="ctrls" style="margin:0">
+          <span style="font-size:16px;color:var(--ink2)">航空公司</span>
+          <select id="t2-alsel"></select>
+        </div>
+      </div>
+      <div class="card" id="t2-banner"></div>
+      <div class="grid2">
+        <div class="card" style="margin:0">
+          <div class="ctitle"><h3>主要機型</h3></div>
+          <div id="t2-actbl"></div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="ctitle"><h3>主要航點</h3></div>
+          <p class="chint">點選航點 → 下方熱力圖高亮該航線時段；再點取消。</p>
+          <div id="t2-pttbl"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><h3>週間分時起降熱力圖</h3></div>
+        <div id="t2-hlnote"></div>
+        <div class="hmkey" id="t2-hmkey"></div>
+        <div class="hmwrap" id="t2-hm"></div>
+        <p class="cnote">班次少的航司格子多為空屬正常。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 貨機延遲分析 ========================= -->
+  <section class="panel" id="t3">
+    <div class="card">
+      <div class="ctitle"><h2>關鍵延遲與變動指標</h2></div>
+      <div class="dual" id="t3-dual"></div>
+      <p class="cnote" id="t3-base"></p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ctitle"><h2>常態延遲分佈</h2><span class="tag">排除特殊日</span></div>
+        <p class="chint">母體 = flown，六互斥分箱，加總 100%。</p>
+        <div id="t3-pie-a"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle"><h2>真實狀況分佈</h2><span class="tag">含特殊日</span></div>
+        <p class="chint">母體 = flown + unresolved，六分箱外多一塊「取消或改期」。</p>
+        <p class="chint" id="t3-pie-b-note"></p>
+        <div id="t3-pie-b"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle"><h2>各航空公司延遲狀況</h2><span class="tag">排除特殊日</span></div>
+      <p class="chint">所有貨運航空公司，依架次排序。分箱欄以<b>佔比</b>為主、架次為輔。</p>
+      <div id="t3-tbl"></div>
+    </div>
+  </section>
+
+  <!-- ========================= 每日航班預報 ========================= -->
+  <section class="panel on" id="t4">
+    <div class="card">
+      <div class="ctrls" style="margin:0">
+        <div class="seg" id="t4-kind"></div>
+        <div class="seg" id="t4-dir"></div>
+        <span class="chint" id="t4-snap" style="margin-left:auto"></span>
+      </div>
+    </div>
+    <div id="t4-stale"></div>
+    <div class="card">
+      <div class="ctitle"><h2>昨日回顧</h2><span class="tag" id="t4a-date"></span></div>
+      <div class="kpis" id="t4a-kpi"></div>
+      <p class="cnote" id="t4a-gap" style="margin:8px 0 12px"></p>
+      <div class="legend" id="t4a-legend"></div>
+      <div class="chart" id="t4a-chart"></div>
+    </div>
+    <div class="card">
+      <div class="ctitle"><h2>今日班表</h2><span class="tag" id="t4b-date"></span></div>
+      <div class="kpis" id="t4b-kpi" style="margin-bottom:12px"></div>
+      <div class="legend" id="t4b-legend"></div>
+      <div class="chart" id="t4b-chart"></div>
+      <p class="cnote">折線＝上週同星期實際分時（照實含事件日）。</p>
+    </div>
+    <div class="card">
+      <div class="ctitle"><h2>明日班表</h2><span class="tag" id="t4c-date"></span></div>
+      <div class="kpis" id="t4c-kpi" style="margin-bottom:12px"></div>
+      <div class="legend" id="t4c-legend"></div>
+      <div class="chart" id="t4c-chart"></div>
+      <p class="cnote"><b>明日機型多未定，架次為預估。</b>折線＝上週同星期實際分時。</p>
+    </div>
+  </section>
+
+  <!-- ========================= 頁籤 5 ========================= -->
+  <section class="panel" id="t5">
+    <div class="card">
+      <div class="ctitle"><h2>5　衍生貨量推估</h2><span class="tag">待規劃</span></div>
+      <p class="chint" style="margin-bottom:12px">此頁待規劃。以下為已知資料缺口，屬本儀表板無法解決、需由上游資料或推計模組處理者。</p>
+      <div class="banner info"><span>ℹ️</span><div id="t5-gaps"></div></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    資料來源：TDX 桃園機場航班資料 · 經 Google Apps Script 清理<br>
+    本頁於載入時即時讀取 Google Sheet，資料每日更新
+  </div>
+</main>
+
+<script>
+"use strict";
+/* ================================================================
+   CONFIG — 更換 Sheet 只需改這裡
+   ================================================================ */
+const CFG = {
+  sheets: {
+    clean: {
+      id: '1VYaHv_dwlDSWWMDd38yiXOkcVl1IMIUUHL18s4oHQmU', tab: 'clean',
+      // schedule_hour 為必要欄位：ScheduleTime 的數字格式是 yyyy/M/d，gviz 依顯示格式決定
+      // 回傳型別因而截斷時間，無法自該欄取得表定時刻。列於 expect 使其缺漏時明確報錯。
+      expect: ['UID','Direction','FlightDate','AirlineID','FlightNumber','DepartureAirportID',
+               'ArrivalAirportID','ScheduleTime','ActualTime','IsCargo','AcType','Apron',
+               'Terminal','status','delay_min','actual_date','actual_hour','schedule_hour',
+               'is_overnight','actype_missing']
+    },
+    forecast: {
+      id: '1hPp6NfU8yPtooRXQnNV5KLH9X-Mg87rcYmAuYhARohU', tab: 'forecast',
+      expect: ['UID','Direction','forecast_date','day_tag','AirlineID','FlightNumber',
+               'DepartureAirportID','ArrivalAirportID','ScheduleTime','EstimatedTime','ActualTime',
+               'IsCargo','AcType','fc_status','fc_time','fc_hour','snapshot_time']
+    },
+    events: {
+      id: '1AtND3sHGdhblf6EFQboezuWJmFU3BHDkuPcsojsxLAU', tab: '',
+      expect: ['日期','星期','事件分類','事件描述','是否排除統計']
+    },
+    // 航空公司對照表。id 留空時 2-(二) 與 3-3 自動降級為只顯示 IATA 代碼。
+    airlines: {
+      id: '1QfJK23sxxvRt7Ulqiwgyq_pEnEIOnKNbCK8VK79cvZg', tab: '',
+      expect: ['順序','航空公司代碼 (IATA)','中文名稱','英文名稱','主要基地機場 / 樞紐機場 (Hub)'],
+      map: { code:1, zh:2, en:3, hub:4 }   // 欄位索引（0 起算）
+    }
+  },
+  // 3-2 / 3-3 六互斥分箱（上界含）
+  bins: [
+    { key:'ontime', label:'準點及提早', max:0,     color:'#059669' },
+    { key:'d1',     label:'延誤 ≤1hr',  max:60,    color:'#84cc16' },
+    { key:'d2',     label:'1–2hr',      max:120,   color:'#facc15' },
+    { key:'d3',     label:'2–3hr',      max:180,   color:'#fb923c' },
+    { key:'d4',     label:'3–4hr',      max:240,   color:'#f43f5e' },
+    { key:'d5',     label:'>4hr',       max:Infinity, color:'#9f1239' }
+  ],
+  // 「其他」與「取消或改期」統一為單一灰色系
+  other: '#9aa4b2',
+  unresolvedColor: '#9aa4b2',
+  pieMinPct: 3,                 // 圓餅圖 <3% 併入「其他」
+  gaps: [
+    '<b>取消或改期統計自 2026-07-07 起算，此邊界永久存在於這段歷史。</b>' +
+      'TDX 抓取起始於 2026-07-06 傍晚，故 7/5–7/6 兩日「表定但未起飛」的班次從未被記錄' +
+      '（該兩日 unresolved 僅 0、2 筆，而同為週一的 7/13 為 38 筆、取消改期率 33.9%）。' +
+      'TDX 不提供歷史回補，這兩天的取消改期資料再也補不回來。' +
+      '架次類（flown）與延誤統計不受影響，仍從 7/5 起算。' +
+      '此規則由特殊事件表以「只排除取消與改期統計」驅動，非寫死於程式。',
+    '無實際貨量：機型→貨量為推估，屬後續推計模組。',
+    '無機尾號：算不出單機地面停留時間；車流壅塞改用「進出場架次密度」代理。',
+    'Apron 僅貨機有值。',
+    '缺值航點（代碼為 "."）無法自動回填。',
+    'unresolved 為混合成因（取消／改期／遲補），D-3 後收斂為「取消或改期」；細分「取消 vs 改期」待聚合階段以「同班號鄰近日期是否重現」＋「時間更改 Remark」線索處理。'
+  ]
+};
+
+/* ================================================================
+   工具
+   ================================================================ */
+const $  = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+const WD = ['日','一','二','三','四','五','六'];   // getDay() 0=日
+
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtInt = n => (n==null||!isFinite(n)) ? '—' : Math.round(n).toLocaleString('en-US');
+const fmtPct = (n,d) => (n==null||!isFinite(n)) ? '—' : n.toFixed(d==null?1:d)+'%';
+
+/** gviz 的日期序列化：Date(2026,6,5) 或 Date(2026,6,15,2,20,0)，月份 0-based */
+function pd(v){
+  if (v == null) return null;
+  if (typeof v !== 'string') return null;
+  const m = /^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)$/.exec(v);
+  if (!m) return null;
+  return new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+}
+const iso  = d => !d ? null :
+  d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const md   = s => s ? s.slice(5).replace('-','/') : '—';
+const isoToDate = s => { const p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); };
+const addDays = (s,n) => { const d=isoToDate(s); d.setDate(d.getDate()+n); return iso(d); };
+const dowOf = s => isoToDate(s).getDay();
+
+/** ISO 8601 週：回傳 {year, week, monday(iso)} */
+function weekOf(isoStr){
+  const d = isoToDate(isoStr);
+  const day = (d.getDay()+6)%7;              // 0=Mon
+  const mon = new Date(d); mon.setDate(d.getDate()-day);
+  const th  = new Date(mon); th.setDate(mon.getDate()+3);   // 該週週四決定年份
+  const jan1 = new Date(th.getFullYear(),0,1);
+  const week = Math.round(((th-jan1)/86400000 + 1)/7 + 0.5);
+  return { year: th.getFullYear(), week, monday: iso(mon) };
+}
+const median = arr => {
+  if (!arr.length) return null;
+  const a = arr.slice().sort((x,y)=>x-y), m = a.length>>1;
+  return a.length%2 ? a[m] : (a[m-1]+a[m])/2;
+};
+/** 分箱：以 delay_min 落入 CFG.bins 的第一個 max */
+const binOf = dm => CFG.bins.findIndex(b => dm <= b.max);
+
+/* ================================================================
+   讀取層
+   ================================================================ */
+async function gviz(key){
+  const c = CFG.sheets[key];
+  if (!c || !c.id) return null;
+  const url = 'https://docs.google.com/spreadsheets/d/' + c.id +
+              '/gviz/tq?tqx=out:json' + (c.tab ? '&sheet=' + encodeURIComponent(c.tab) : '') +
+              '&_cb=' + Date.now();          // 避開瀏覽器快取，確保拿到當日資料
+  const res = await fetch(url, { cache:'no-store' });
+  if (!res.ok) throw new Error(key + '：HTTP ' + res.status);
+  const txt = await res.text();
+  const m = txt.match(/setResponse\(([\s\S]*)\);?\s*$/);
+  if (!m) throw new Error(key + '：回應格式非預期（Sheet 可能未公開共用）');
+  const j = JSON.parse(m[1]);
+  if (j.status !== 'ok') throw new Error(key + '：' + ((j.errors||[]).map(e=>e.detailed_message||e.message).join('；') || '查詢失敗'));
+
+  const labels = j.table.cols.map(x => x.label);
+  // gviz 找不到分頁名稱時會「靜默回傳第一個分頁」而非報錯 —— 用欄位比對擋掉。
+  if (c.expect){
+    const miss = c.expect.filter(x => !labels.includes(x));
+    if (miss.length) throw new Error(
+      key + '：分頁「' + (c.tab||'(預設)') + '」欄位不符，缺少 ' + miss.join('、') +
+      '。實際讀到：' + labels.join('、') + '（分頁名稱是否被改過？）');
+  }
+  return { cols: j.table.cols, labels, rows: j.table.rows || [] };
+}
+
+/** 依欄位「名稱」取值，避免寫死索引 */
+function reader(t){
+  const ix = {}; t.labels.forEach((l,i)=> ix[l]=i);
+  return (row, label) => {
+    const i = ix[label];
+    if (i == null) return null;
+    const c = row.c[i];
+    return c ? c.v : null;
+  };
+}
+
+/* ================================================================
+   資料模型
+   ================================================================ */
+const DB = {
+  clean:[], fc:[], events:new Map(), airlines:new Map(),
+  snapshot:null, dates:[], weeks:[]
+};
+
+function loadClean(t){
+  const g = reader(t);
+  DB.clean = t.rows.map(r => {
+    const ad = pd(g(r,'actual_date'));
+    const fd = pd(g(r,'FlightDate'));
+    return {
+      uid:      g(r,'UID'),
+      dir:      g(r,'Direction'),                 // DEP / ARR
+      fdate:    iso(fd),
+      airline:  g(r,'AirlineID'),
+      flt:      g(r,'FlightNumber'),
+      dep:      g(r,'DepartureAirportID'),
+      arr:      g(r,'ArrivalAirportID'),
+      // 表定時刻取預算好的 schedule_hour 欄。不可改由 ScheduleTime 推算 ——
+      // 該欄的數字格式為 yyyy/M/d，gviz 會依顯示格式截斷掉時間，恆得 0 時。
+      schedH:   g(r,'schedule_hour'),
+      cargo:    g(r,'IsCargo') === true,
+      ac:       g(r,'AcType'),
+      status:   g(r,'status'),                    // flown / cancelled / unresolved
+      delay:    g(r,'delay_min'),
+      adate:    iso(ad),
+      ahour:    g(r,'actual_hour'),
+      overnight:g(r,'is_overnight') === true
+    };
+  });
+  // 架次類統計以 actual_date 分桶；cancelled / unresolved 無 actual_date，事件 join 退回 FlightDate
+  DB.clean.forEach(r => r.ekey = r.adate || r.fdate);
+
+  // 日期母體：從「最小 FlightDate」到「前一日」的完整日曆區間。
+  //  · 下界用 FlightDate 而非 actual_date —— 跨日航班會讓 actual_date 早一天（如 7/5 的班 23:xx 提早降落
+  //    落在 7/4），那天只有零星幾班，是邊界產物不是完整日。
+  //  · 用連續區間而非「有 flown 的日期」—— 否則機場關閉當天（flown=0）會被靜默跳過，
+  //    而那正是最該被看到的一天。缺資料日在圖上留白，事件標記另行說明。
+  //  · 當日未定稿，不列入。
+  const today = iso(new Date());
+  const fds = DB.clean.map(r => r.fdate).filter(Boolean).sort();
+  DB.dates = [];
+  if (fds.length){
+    for (let d = fds[0]; d < today; d = addDays(d, 1)) DB.dates.push(d);
+  }
+
+  const wk = new Map();
+  DB.dates.forEach(d => { const w = weekOf(d); wk.set(w.year+'-'+w.week, w); });
+  DB.weeks = [...wk.values()].sort((a,b)=> a.monday < b.monday ? 1 : -1);   // 新到舊
+}
+
+function loadForecast(t){
+  const g = reader(t);
+  DB.fc = t.rows.map(r => ({
+    uid:    g(r,'UID'),
+    dir:    g(r,'Direction'),
+    fdate:  iso(pd(g(r,'forecast_date'))),
+    tag:    g(r,'day_tag'),                      // D / D+1
+    airline:g(r,'AirlineID'),
+    dep:    g(r,'DepartureAirportID'),
+    arr:    g(r,'ArrivalAirportID'),
+    cargo:  g(r,'IsCargo') === true,
+    ac:     g(r,'AcType'),
+    st:     g(r,'fc_status'),                    // actual / scheduled
+    hour:   g(r,'fc_hour')
+  }));
+  const snaps = t.rows.map(r => pd(g(r,'snapshot_time'))).filter(Boolean).sort((a,b)=>b-a);
+  DB.snapshot = snaps[0] || null;
+}
+
+/**
+ * 「是否排除統計」有三種模式，事件表是唯一的控制來源（改表即改行為，不需動程式）：
+ *   'all'   ＝「是」    → 該日排除於所有常態統計（颱風、機場關閉等不可預期中斷）
+ *   'unres' ＝ 含「取消」→ 該日僅排除於「取消或改期」統計，架次／延誤統計照常納入
+ *                          （用於 7/5–7/6：TDX 抓取起始於 7/6 傍晚，沒飛的班未被記錄）
+ *   'none'  ＝ 其他／否  → 僅標記，不排除（連假等可預期事件）
+ * 以關鍵字比對而非完全等值，可容忍引號與空白的寫法差異。
+ */
+function exclMode(raw){
+  const s = String(raw||'').trim();
+  if (s === '是') return 'all';
+  if (/取消|改期/.test(s)) return 'unres';
+  return 'none';
+}
+function loadEvents(t){
+  const g = reader(t);
+  t.rows.forEach(r => {
+    const d = iso(pd(g(r,'日期')));
+    if (!d) return;
+    DB.events.set(d, {
+      cat:  g(r,'事件分類'),
+      desc: g(r,'事件描述'),
+      raw:  g(r,'是否排除統計'),
+      mode: exclMode(g(r,'是否排除統計'))
+    });
+  });
+}
+
+function loadAirlines(t){
+  if (!t) return;
+  const m = CFG.sheets.airlines.map;
+  t.rows.forEach(r => {
+    const val = i => { const c = r.c[i]; return c ? c.v : null; };
+    const code = String(val(m.code)||'').trim();
+    if (!code) return;
+    DB.airlines.set(code, { zh: val(m.zh), en: val(m.en), hub: val(m.hub) });
+  });
+}
+
+/* 事件輔助 */
+const evOf   = d => DB.events.get(d) || null;
+const modeOf = d => { const e = DB.events.get(d); return e ? e.mode : 'none'; };
+const isExcl = d => modeOf(d) === 'all';
+const evMark = d => evOf(d) ? ' ⚠' : '';
+/** 常態母體：排除「是否排除統計 = 是」的日期。標「只排除取消與改期統計」者不在此排除。 */
+const normal = rows => rows.filter(r => !isExcl(r.ekey));
+/**
+ * 該筆的「取消或改期」資料是否可信。
+ * 以 FlightDate 判定 —— 缺的是「表定」那一側的紀錄，與實際起降日無關。
+ */
+const unresTrusted = r => modeOf(r.fdate) !== 'unres';
+
+/* ================================================================
+   SVG 圖表原語（零依賴；隨容器寬度重繪，手機上文字不變形）
+   ================================================================ */
+const NS = 'http://www.w3.org/2000/svg';
+const REG = new Set();                       // 已渲染的圖表，供 resize 重繪
+
+function el(n, a, txt){
+  const e = document.createElementNS(NS, n);
+  for (const k in (a||{})) e.setAttribute(k, a[k]);
+  if (txt != null) e.textContent = txt;
+  return e;
+}
+function mount(host, fn){
+  host.__draw = fn; REG.add(host); redraw(host);
+}
+function redraw(host){
+  const w = host.clientWidth || host.parentElement.clientWidth || 320;
+  if (w < 40) return;
+  host.innerHTML = '';
+  const svg = host.__draw(w);
+  if (svg) host.appendChild(svg);
+}
+let rt;
+addEventListener('resize', () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => REG.forEach(h => { if (h.isConnected && h.offsetParent) redraw(h); }), 140);
+});
+
+/**
+ * 量測文字寬度，用來替標籤保留空間（避免 B747-400 被切成 747-400）。
+ * 用 canvas 實測而非依字元數估算 —— 估算對中英數混排一定會偏差，差幾 px 就切字。
+ */
+const _mc = document.createElement('canvas').getContext('2d');
+const FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+function textW(s, fs){
+  _mc.font = fs + 'px ' + FONT;
+  return _mc.measureText(String(s)).width;
+}
+
+/**
+ * 斜紋 pattern（預期班次用），每個顏色一份。
+ *
+ * id 必須全域唯一：SVG 的 id 是「整份文件」共用的命名空間，url(#…) 只會解析到文件中
+ * 第一個同名節點。先前所有圖表都產生 h0/h1/…，於是第二張之後的圖全部指到第一張的
+ * pattern（顏色錯、甚至看不出紋路），而圖例是 CSS 漸層畫的所以看起來正常 ——
+ * 症狀是「圖例對、長條錯」，極難察覺。
+ */
+let PAT_SEQ = 0;
+function hatchDefs(colors){
+  const ns = 'h' + (++PAT_SEQ) + '_';
+  const defs = el('defs');
+  colors.forEach((c,i) => {
+    const p = el('pattern', { id: ns+i, patternUnits:'userSpaceOnUse', width:7, height:7,
+                              patternTransform:'rotate(45)' });
+    p.appendChild(el('rect', { width:7, height:7, fill:'#fff' }));
+    p.appendChild(el('rect', { width:3.2, height:7, fill:c }));
+    defs.appendChild(p);
+  });
+  return { defs, ns };
+}
+const fillOf = (s, i, ns) => s.hatch ? `url(#${ns}${i})` : s.color;
+
+/**
+ * 直式長條圖（可堆疊）＋ 可疊折線
+ * opts: { cats:[{label,mark}], series:[{name,color,hatch,data}], lines:[{name,color,data,dash}],
+ *         showValues, height, yTitle, xTitle }
+ */
+function barChart(host, o){
+  mount(host, (W) => {
+    const H  = o.height || 260;
+    const markH = o.cats.some(c => c.mark) ? 17 : 0;
+    const l2H  = o.cats.some(c => c.label2) ? 15 : 0;     // 標籤第二行
+    const ml = 40, mr = 8, mt = (o.yTitle ? 20 : 0) + (o.showValues ? 16 : 8);
+    const mb = 24 + l2H + markH + (o.xTitle ? 20 : 0);
+    const iw = Math.max(10, W - ml - mr), ih = Math.max(20, H - mt - mb);
+    const n  = o.cats.length;
+    const bw = iw / Math.max(1, n);
+    const totals = o.cats.map((_, i) => o.series.reduce((s, x) => s + (x.data[i]||0), 0));
+    let max = Math.max(...totals, ...(o.lines||[]).flatMap(l => l.data.filter(v=>v!=null)), 1);
+    max = Math.ceil(max * 1.12) || 1;
+    const y = v => mt + ih - (v / max) * ih;
+
+    const svg = el('svg', { width:W, height:H, viewBox:`0 0 ${W} ${H}`, role:'img' });
+    const { defs, ns } = hatchDefs(o.series.map(s => s.color));
+    svg.appendChild(defs);
+
+    // Y 軸單位（橫排置於軸頂，較旋轉標籤省空間且易讀）
+    if (o.yTitle)
+      svg.appendChild(el('text', { x:2, y:12, 'font-size':14, 'font-weight':600, fill:'#5b6470' }, o.yTitle));
+
+    // Y 軸格線
+    const ticks = 4;
+    for (let i = 0; i <= ticks; i++){
+      const v = max * i / ticks, yy = y(v);
+      svg.appendChild(el('line', { x1:ml, x2:W-mr, y1:yy, y2:yy, stroke:'#eef1f4', 'stroke-width':1 }));
+      svg.appendChild(el('text', { x:ml-6, y:yy+4, 'text-anchor':'end', 'font-size':12, fill:'#8b95a3' },
+                        String(Math.round(v))));
+    }
+
+    // 堆疊長條
+    const pad = Math.min(3, bw * 0.16);
+    o.cats.forEach((c, i) => {
+      let acc = 0;
+      o.series.forEach((s, si) => {
+        const v = s.data[i] || 0;
+        if (!v) return;
+        const h = (v / max) * ih;
+        svg.appendChild(el('rect', {
+          x: ml + i*bw + pad, y: y(acc) - h, width: Math.max(1, bw - pad*2), height: h,
+          fill: fillOf(s, si, ns), stroke: s.hatch ? s.color : 'none', 'stroke-width': s.hatch ? 1.2 : 0,
+          rx: 1.5
+        }));
+        acc += v;
+      });
+      if (o.showValues && totals[i] > 0 && bw > 17)
+        svg.appendChild(el('text', { x: ml + i*bw + bw/2, y: y(totals[i]) - 4, 'text-anchor':'middle',
+                                     'font-size':12, 'font-weight':600, fill:'#5b6470' }, String(totals[i])));
+    });
+
+    // 折線
+    (o.lines||[]).forEach(L => {
+      const pts = L.data.map((v,i) => v==null ? null : [ml + i*bw + bw/2, y(v)]).filter(Boolean);
+      if (pts.length > 1)
+        svg.appendChild(el('path', {
+          d: 'M' + pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join('L'),
+          fill:'none', stroke:L.color, 'stroke-width':2,
+          'stroke-dasharray': L.dash || 'none', 'stroke-linejoin':'round'
+        }));
+      pts.forEach(p => svg.appendChild(el('circle', { cx:p[0], cy:p[1], r:2.4, fill:L.color })));
+    });
+
+    // X 軸
+    svg.appendChild(el('line', { x1:ml, x2:W-mr, y1:mt+ih, y2:mt+ih, stroke:'#d6dbe1' }));
+    // 抽稀間隔依「實際量到的最寬標籤」計算，而非寫死的字級門檻 ——
+    // 否則字級一放大，標籤就會彼此重疊成一團。
+    const labW = Math.max(...o.cats.map(c => textW(c.label, 12.5)), 1);
+    const step = Math.max(1, Math.ceil((labW + 5) / bw));
+    o.cats.forEach((c, i) => {
+      if (i % step) return;
+      svg.appendChild(el('text', { x: ml + i*bw + bw/2, y: mt+ih+16, 'text-anchor':'middle',
+                                   'font-size':12.5, fill:'#5b6470' }, c.label));
+      if (c.label2)
+        svg.appendChild(el('text', { x: ml + i*bw + bw/2, y: mt+ih+16+l2H-2, 'text-anchor':'middle',
+                                     'font-size':12, fill:'#8b95a3' }, c.label2));
+    });
+    // 事件標記獨立一列，不受 step 抽稀影響 —— 特殊日不能因軸標籤太密而被隱藏
+    o.cats.forEach((c, i) => {
+      if (!c.mark) return;
+      svg.appendChild(el('text', { x: ml + i*bw + bw/2, y: mt+ih+16+l2H+markH-4, 'text-anchor':'middle',
+                                   'font-size':12, 'font-weight':600, fill:'#b45309' }, c.mark));
+    });
+    if (o.xTitle)
+      svg.appendChild(el('text', { x: ml + iw/2, y: H-4, 'text-anchor':'middle',
+                                   'font-size':14, 'font-weight':600, fill:'#5b6470' }, o.xTitle));
+    return svg;
+  });
+}
+
+/**
+ * 橫條圖：全部項目、由多至少、數字標於長條尾端，外層以捲軸瀏覽
+ * items: [{label, value, color}]
+ */
+function hbarChart(host, items, o){
+  o = o || {};
+  const rowH = 28, visible = o.visible || 8;
+  host.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'scrolly';
+  // 高度取「實際列數」與「可見上限」的較小者 —— 取固定上限會讓列數少的圖表下方留一大片空白
+  box.style.maxHeight = (Math.min(items.length, visible) * rowH + 6) + 'px';
+  host.appendChild(box);
+  mount(box, (W) => {
+    if (!items.length) { box.innerHTML = '<div class="empty">無資料</div>'; return null; }
+    // 標籤欄寬依最長標籤動態計算（機型如 B747-400 比航司代碼長得多），上限四成避免吃掉長條
+    const lw = Math.min(W*0.42, Math.max(34, Math.max(...items.map(d => textW(d.label, 15))) + 10));
+    const vw = Math.max(...items.map(d => textW(String(d.value), 14))) + 10;
+    const H  = items.length * rowH + 4;
+    const iw = Math.max(20, W - lw - vw - 4);
+    const max = Math.max(...items.map(d => d.value), 1);
+    const svg = el('svg', { width:W, height:H, viewBox:`0 0 ${W} ${H}` });
+    items.forEach((d, i) => {
+      const yy = i * rowH + 3, bh = rowH - 9;
+      svg.appendChild(el('text', { x:lw-7, y:yy+bh/2+5, 'text-anchor':'end', 'font-size':15,
+                                   fill:'#1c1f23' }, d.label));
+      const w = Math.max(1, (d.value/max) * iw);
+      svg.appendChild(el('rect', { x:lw, y:yy, width:w, height:bh, fill:d.color, rx:2 }));
+      // 數字標於長條尾端
+      svg.appendChild(el('text', { x:lw+w+5, y:yy+bh/2+5, 'font-size':14,
+                                   'font-weight':650, fill:'#5b6470' }, String(d.value)));
+    });
+    return svg;
+  });
+}
+
+/**
+ * 圓餅圖：≥3% 獨立呈現，<3% 併入「其他」（單一灰）；標籤與比率直接標於扇形外緣
+ * items: [{label, value, color}]
+ */
+function pieChart(host, items, o){
+  o = o || {};
+  const total = items.reduce((s,d) => s + d.value, 0);
+  let keep = items, other = 0;
+  if (o.group !== false){
+    keep = items.filter(d => d.value/total*100 >= CFG.pieMinPct);
+    other = total - keep.reduce((s,d)=>s+d.value, 0);
+    if (other > 0) keep = keep.concat([{ label:'其他', value:other, color:CFG.other }]);
+  }
+  mount(host, (W) => {
+    if (!total) { host.innerHTML = '<div class="empty">無資料</div>'; return null; }
+    const FS = 13.5;
+    // 標籤直接標在扇形外緣，半徑必須替最長標籤讓位，否則長標籤會被畫布裁掉。
+    // 單行放不下時改為兩行（名稱／比率）—— 寬度砍半，圓餅才能維持可讀的大小。
+    const oneLineW = Math.max(...keep.map(d => textW(d.label + ' 00.0%', FS)));
+    const twoLine  = oneLineW > W * 0.30;
+    const labW = twoLine
+      ? Math.max(...keep.map(d => Math.max(textW(d.label, FS), textW('00.0%', FS))))
+      : oneLineW;
+
+    const LH = twoLine ? FS*2 + 6 : FS + 4;
+    const need = Math.max(...['l','r'].map(() => 0), keep.length/2 * LH);
+    const H = o.height || Math.max(250, Math.min(400, need + 90));
+    const cx = W/2, cy = H/2;
+    const R = Math.max(42, Math.min(H/2 - 26, cx - labW - 26));
+
+    const svg = el('svg', { width:W, height:H, viewBox:`0 0 ${W} ${H}` });
+    let a0 = -Math.PI/2;
+    const labs = [];
+    keep.forEach(d => {
+      const frac = d.value/total, a1 = a0 + frac*Math.PI*2, mid = (a0+a1)/2;
+      const big = (a1-a0) > Math.PI ? 1 : 0;
+      const p = (r,a) => [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+      const [x0,y0] = p(R,a0), [x1,y1] = p(R,a1);
+      svg.appendChild(el('path', {
+        d: `M${cx},${cy}L${x0.toFixed(1)},${y0.toFixed(1)}A${R},${R} 0 ${big} 1 ${x1.toFixed(1)},${y1.toFixed(1)}Z`,
+        fill: d.color, stroke:'#fff', 'stroke-width':1.5
+      }));
+      labs.push({ mid, d, pct: frac*100 });
+      a0 = a1;
+    });
+
+    // 外緣標籤 + 引線，左右分側後依 y 排序去重疊
+    const sides = { l:[], r:[] };
+    labs.forEach(L => {
+      const right = Math.cos(L.mid) >= 0;
+      L.ax = cx + (R+8)*Math.cos(L.mid);
+      L.ay = cy + (R+8)*Math.sin(L.mid);
+      L.ty = L.ay;
+      sides[right ? 'r':'l'].push(L);
+    });
+    ['l','r'].forEach(k => {
+      const arr = sides[k].sort((a,b)=>a.ay-b.ay);
+      for (let i=1;i<arr.length;i++)
+        if (arr[i].ty - arr[i-1].ty < LH) arr[i].ty = arr[i-1].ty + LH;
+      const over = arr.length ? arr[arr.length-1].ty - (H-10) : 0;
+      if (over > 0) arr.forEach(L => L.ty -= over);
+      const under = arr.length ? 12 - arr[0].ty : 0;
+      if (under > 0) arr.forEach(L => L.ty += under);
+      arr.forEach(L => {
+        const right = k === 'r';
+        const ex = right ? Math.min(W-3, cx+R+22) : Math.max(3, cx-R-22);
+        svg.appendChild(el('path', {
+          d:`M${L.ax.toFixed(1)},${L.ay.toFixed(1)}L${(ex+(right?-5:5)).toFixed(1)},${L.ty.toFixed(1)}L${ex.toFixed(1)},${L.ty.toFixed(1)}`,
+          fill:'none', stroke:'#c8cfd8', 'stroke-width':1
+        }));
+        const anchor = right ? 'start' : 'end';
+        const x = right ? ex+3 : ex-3;
+        if (twoLine){
+          svg.appendChild(el('text', { x, y:L.ty-1, 'text-anchor':anchor, 'font-size':FS,
+                                       'font-weight':650, fill:'#1c1f23' }, L.d.label));
+          svg.appendChild(el('text', { x, y:L.ty+FS+1, 'text-anchor':anchor, 'font-size':FS,
+                                       fill:'#5b6470' }, L.pct.toFixed(1)+'%'));
+        } else {
+          const t = el('text', { x, y:L.ty+4.5, 'text-anchor':anchor, 'font-size':FS });
+          t.appendChild(el('tspan', { fill:'#1c1f23', 'font-weight':650 }, L.d.label + ' '));
+          t.appendChild(el('tspan', { fill:'#5b6470' }, L.pct.toFixed(1) + '%'));
+          svg.appendChild(t);
+        }
+      });
+    });
+    return svg;
+  });
+}
+
+/**
+ * 密度分級門檻 [t1, t2]：低 = 1..t1、中 = t1+1..t2、高 = >t2。
+ *
+ * 貨運採固定分級（低 1–2、中 3–4、高 5 以上）—— 貨機班次量級穩定，固定門檻讓不同週、
+ * 不同航司之間可直接對照；動態分位會使「同樣 3 架」在不同週顯示成不同顏色，無法比較。
+ * 客運班次量級大得多，仍依該範圍 >0 格子的三等分位計算，並把實際門檻寫進圖例。
+ */
+const CARGO_LEVELS = [2, 4];
+function levelsOf(vals, kind){
+  if (kind === 'cargo') return CARGO_LEVELS;
+  const v = vals.filter(x => x > 0).sort((a,b)=>a-b);
+  if (!v.length) return [1, 2];
+  const q = p => v[Math.min(v.length-1, Math.floor(p * v.length))];
+  let t1 = q(1/3), t2 = q(2/3);
+  if (t2 <= t1) t2 = t1 + 1;
+  return [t1, t2];
+}
+const densOf = (v, t) => v <= 0 ? 'z' : v <= t[0] ? 'd1' : v <= t[1] ? 'd2' : 'd3';
+/** 取出格子值，供動態門檻計算 */
+function cellVals(grid, valid){
+  const out = [];
+  for (let d=0; d<7; d++){ if (valid && !valid[d]) continue;
+    for (let h=0; h<24; h++) out.push(grid[d][h]||0); }
+  return out;
+}
+
+/**
+ * 熱力圖：星期(欄) × 時段(列)。
+ * grid[dow][hour]＝架次；heads[dow]＝表頭副標；valid[dow]＝該日是否在統計母體內。
+ * 0 架：不上色，但仍顯示「0」—— 有紀錄且真的是 0。
+ * 非母體日（未到達／當日未定稿）：整欄留白，不可與「0 架」混為一談。
+ * hi[dow][hour]＝true → 高亮該格（其餘淡化）
+ */
+function heatmap(title, grid, heads, cls, hi, valid, levels){
+  const any = hi && hi.some(r => r.some(Boolean));
+  let s = `<table class="hm ${cls}"><caption>${esc(title)}</caption><thead><tr><th class="hr"></th>`;
+  for (let d=0; d<7; d++)
+    s += `<th>${WD[(d+1)%7]}<br><span style="color:var(--ink3);font-weight:400">${heads[d]||''}</span></th>`;
+  s += '</tr></thead><tbody>';
+  for (let h=0; h<24; h++){
+    s += `<tr><th class="hr">${h}</th>`;
+    for (let d=0; d<7; d++){
+      if (valid && !valid[d]) { s += '<td class="na"></td>'; continue; }
+      const v = grid[d][h] || 0;
+      const on = any ? (hi[d][h] ? ' hl' : ' dim') : '';
+      s += `<td class="${densOf(v, levels)}${on}">${v}</td>`;
+    }
+    s += '</tr>';
+  }
+  return s + '</tbody></table>';
+}
+/** 圖例須寫明分級標準（客貨皆是），使用者才知道顏色各代表幾架 */
+const rng = (a, b) => a === b ? `${a} 架` : `${a}~${b} 架`;
+const hmKey = t => `
+  <span><i class="k0"></i>無航班（0 架）</span>
+  <span><i class="k1"></i>低（${rng(1, t[0])}）</span>
+  <span><i class="k2"></i>中（${rng(t[0]+1, t[1])}）</span>
+  <span><i class="k3"></i>高（${t[1]+1} 架以上）</span>`;
+
+/* ================================================================
+   共用篩選 / 控制項
+   ================================================================ */
+const DIR_LABEL  = { all:'起+降', DEP:'起飛', ARR:'降落' };
+const KIND_LABEL = { all:'全部', cargo:'貨運', pax:'客運' };
+const dowIdx = s => (isoToDate(s).getDay() + 6) % 7;        // 0=Mon … 6=Sun
+
+/**
+ * 該週的週一～週日；不在統計母體內的日子回傳 null（→ 圖上留白）。
+ * 擋掉兩種假資料：當日未定稿（只有半天）、以及尚未到達的未來日。
+ */
+const weekDays = monday =>
+  Array.from({length:7}, (_,i) => addDays(monday, i))
+       .map(d => DB.dates.includes(d) ? d : null);
+
+function filt(rows, kind, dir){
+  return rows.filter(r =>
+    (kind === 'all' || (kind === 'cargo' ? r.cargo : !r.cargo)) &&
+    (dir  === 'all' || r.dir === dir));
+}
+/** 分時桶（24）：以 actual_hour 分桶 */
+function byHour(rows){
+  const a = new Array(24).fill(0);
+  rows.forEach(r => { if (r.ahour != null && r.ahour >= 0 && r.ahour < 24) a[r.ahour]++; });
+  return a;
+}
+const flown = rows => rows.filter(r => r.status === 'flown');
+
+/** 分段控制項 */
+function seg(host, opts, cur, on){
+  host.innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button');
+    b.textContent = o.label; b.__v = o.v;
+    b.setAttribute('aria-pressed', String(o.v === cur()));
+    b.onclick = () => on(o.v);
+    host.appendChild(b);
+  });
+}
+function segSync(host, cur){
+  $$('button', host).forEach(b => b.setAttribute('aria-pressed', String(b.__v === cur)));
+}
+/** 起降/客貨的圖例名稱隨篩選即時更新（避免混淆） */
+const scopeName = (kind, dir) => KIND_LABEL[kind] + '·' + DIR_LABEL[dir];
+
+function dirSeries(kind, dir, mk){
+  // dir=all → 起飛/降落堆疊分色；否則單一序列
+  return dir === 'all'
+    ? [ { name:'起飛', color:'var(--dep)', data: mk('DEP') },
+        { name:'降落', color:'var(--arr)', data: mk('ARR') } ]
+    : [ { name:DIR_LABEL[dir], color: dir==='DEP' ? 'var(--dep)' : 'var(--arr)', data: mk(dir) } ];
+}
+const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || v;
+function resolveColors(series){
+  series.forEach(s => { if (s.color.startsWith('var(')) s.color = cssVar(s.color.slice(4,-1)); });
+  return series;
+}
+/**
+ * 圖例。scope＝當前檢視範圍（如「貨運·起+降」），獨立標示一次即可 ——
+ * 若把範圍併進每個項目名稱，會出現「起飛（貨運·起+降）」這種自相矛盾的字串。
+ */
+function legend(host, items, scope){
+  host.innerHTML =
+    (scope ? `<span style="font-weight:650;color:var(--ink)">目前檢視：${esc(scope)}</span>` : '') +
+    items.map(i =>
+      `<span><i style="background:${i.hatch
+        ? `repeating-linear-gradient(45deg,${i.color} 0 3px,#fff 3px 6px)` : i.color};
+        ${i.line ? 'height:2px;border-radius:0' : ''}"></i>${esc(i.name)}</span>`).join('');
+}
+
+/* ================================================================
+   頁籤 1 — 起降架次
+   ================================================================ */
+// 1-1、1-2、1-3 各有自己的客貨切換（互不連動）；1-2 與 1-3 共用週次選單
+const S1 = { date:null, kind:'all', dir:'all', avg:false, week:null, kindB:'all', kind3:'cargo' };
+
+function initT1(){
+  // 日期選單：7/5 起 ～ 前一日（當日未定稿不列入）
+  const ds = $('#t1-date');
+  ds.innerHTML = DB.dates.slice().reverse().map(d =>
+    `<option value="${d}">${md(d)}（${WD[dowOf(d)]}）${evMark(d)}</option>`).join('');
+  S1.date = DB.dates[DB.dates.length-1];
+  ds.value = S1.date;
+  ds.onchange = () => { S1.date = ds.value; drawT1a(); };
+
+  const ws = $('#t1-week');
+  ws.innerHTML = DB.weeks.map(w => {
+    const sun = addDays(w.monday, 6);
+    return `<option value="${w.monday}">${w.week} 週（${md(w.monday)}–${md(sun)}）</option>`;
+  }).join('');
+  S1.week = DB.weeks[0] ? DB.weeks[0].monday : null;
+  ws.value = S1.week;
+  ws.onchange = () => { S1.week = ws.value; drawT1b(); drawT1c(); };
+
+  const KINDS = [{v:'all',label:'全部'},{v:'cargo',label:'貨運'},{v:'pax',label:'客運'}];
+  const DIRS  = [{v:'all',label:'起+降'},{v:'DEP',label:'起飛'},{v:'ARR',label:'降落'}];
+
+  seg($('#t1-kind'), KINDS, ()=>S1.kind, v => { S1.kind=v; segSync($('#t1-kind'),v); drawT1a(); });
+  seg($('#t1-dir'),  DIRS,  ()=>S1.dir,  v => { S1.dir=v;  segSync($('#t1-dir'), v); drawT1a(); });
+  $('#t1-avg').onchange = e => { S1.avg = e.target.checked; drawT1a(); };
+
+  seg($('#t1b-kind'), KINDS, ()=>S1.kindB, v => { S1.kindB=v; segSync($('#t1b-kind'),v); drawT1b(); });
+  seg($('#t1c-kind'), [{v:'cargo',label:'貨運'},{v:'pax',label:'客運'}], ()=>S1.kind3,
+      v => { S1.kind3=v; segSync($('#t1c-kind'),v); drawT1c(); });
+
+  drawT1a(); drawT1b(); drawT1c(); drawT1d();
+}
+
+function drawT1a(){
+  const day = flown(DB.clean).filter(r => r.adate === S1.date);
+  const mk  = d => byHour(filt(day, S1.kind, d));
+  const series = resolveColors(dirSeries(S1.kind, S1.dir, mk));
+
+  // 事件標示：照實呈現架次，僅標符號，不調整數值或顏色
+  const ev = evOf(S1.date);
+  const tot = series.reduce((s,x) => s + x.data.reduce((a,b)=>a+b,0), 0);
+  $('#t1-evt').innerHTML =
+    (ev ? `<div class="banner warn"><span>⚠</span><div><b>${esc(ev.cat)}</b>　${esc(ev.desc)}
+       　<span class="tag">${ {all:'排除於常態統計', unres:'僅排除取消或改期統計', none:'僅標記，不排除'}[ev.mode] }</span>
+       </div></div>` : '') +
+    (tot === 0 ? `<div class="banner err"><span>—</span><div>
+       <b>當日此範圍無任何實際起降（0 架次）。</b>這是真實值，不是資料缺漏。</div></div>` : '');
+
+  const lines = [];
+  if (S1.avg){
+    // 平均代表常態 → 母體排除特殊日
+    const days = DB.dates.filter(d => !isExcl(d));
+    const acc = new Array(24).fill(0);
+    days.forEach(d => {
+      const rows = filt(flown(DB.clean).filter(r => r.adate === d), S1.kind, S1.dir);
+      byHour(rows).forEach((v,h) => acc[h] += v);
+    });
+    lines.push({ name:`平均（${days.length} 個常態日）`, color:'#111', dash:'4 3',
+                 data: acc.map(v => days.length ? +(v/days.length).toFixed(2) : 0) });
+  }
+
+  barChart($('#t1-chart'), {
+    cats: Array.from({length:24}, (_,h) => ({ label:String(h) })),
+    series, lines, showValues:true, height:290,
+    yTitle:'架次數', xTitle:'時間（時）'
+  });
+  legend($('#t1-legend'), series.map(s => ({ name:s.name, color:s.color }))
+    .concat(lines.map(l => ({ name:l.name, color:l.color, line:true }))),
+    scopeName(S1.kind, S1.dir));
+}
+
+function drawT1b(){
+  // 週內尚未到達／當日未定稿的日子一律留白（不可用今日的半天資料充當一整天）
+  const cal  = Array.from({length:7}, (_,i) => addDays(S1.week, i));   // X 軸固定週一至週日
+  const days = weekDays(S1.week);                                       // 非母體日為 null
+  const rows = flown(DB.clean);
+  const mk = d => days.map(dt => dt ? filt(rows.filter(r => r.adate === dt), S1.kindB, d).length : 0);
+  const series = resolveColors([
+    { name:'起飛', color:cssVar('--dep'), data: mk('DEP') },
+    { name:'降落', color:cssVar('--arr'), data: mk('ARR') }
+  ]);
+  barChart($('#t1b-chart'), {
+    // 缺資料日留白（值為 0 即不畫長條）；事件日僅於日期旁標 ⚠＋事件分類，不改長條顏色。
+    // 星期與日期分兩行，單行「一 07/13」放大後 7 天並排會重疊。
+    cats: cal.map(d => ({ label: WD[dowOf(d)], label2: md(d),
+                          mark: evOf(d) ? '⚠' + (evOf(d).cat || '') : '' })),
+    series, showValues:true, height:280,
+    yTitle:'架次數', xTitle:'日期'
+  });
+  legend($('#t1b-legend'), series.map(s => ({ name:s.name, color:s.color })), KIND_LABEL[S1.kindB]);
+}
+
+function drawT1c(){
+  const cal  = Array.from({length:7}, (_,i) => addDays(S1.week, i));
+  const days = weekDays(S1.week);
+  const rows = flown(DB.clean).filter(r => S1.kind3 === 'cargo' ? r.cargo : !r.cargo);
+  const heads = cal.map(d => md(d) + (evOf(d) ? ' ⚠' : ''));
+  const valid = days.map(d => !!d);                 // 非母體日整欄留白，不與「0 架」混淆
+  const build = dir => {
+    const g = Array.from({length:7}, () => new Array(24).fill(0));
+    rows.filter(r => r.dir === dir).forEach(r => {
+      const i = days.indexOf(r.adate);
+      if (i >= 0 && r.ahour != null) g[i][r.ahour]++;
+    });
+    return g;
+  };
+  const D = build('DEP'), R = build('ARR');
+  const lv = levelsOf(cellVals(D, valid).concat(cellVals(R, valid)), S1.kind3);
+  $('#t1c-key').innerHTML = hmKey(lv);
+  $('#t1c-hm').innerHTML =
+    `<div>${heatmap(`起飛 · ${KIND_LABEL[S1.kind3]}`, D, heads, 'dep', null, valid, lv)}</div>` +
+    `<div>${heatmap(`降落 · ${KIND_LABEL[S1.kind3]}`, R, heads, 'arr', null, valid, lv)}</div>`;
+}
+
+function drawT1d(){
+  const days = DB.dates.filter(d => !isExcl(d));
+  const wd   = days.filter(d => { const g = dowOf(d); return g >= 1 && g <= 5; });   // 週一至五
+  const host = $('#t1d-body');
+  if (!wd.length){ host.innerHTML = '<div class="empty">尚無常態工作日資料</div>'; return; }
+
+  const rows = flown(DB.clean);
+  const cell = (kind, dir) => {
+    const per = wd.map(d => filt(rows.filter(r => r.adate === d), kind, dir).length);
+    return per.reduce((a,b)=>a+b, 0) / wd.length;
+  };
+  const peak = (kind) => {
+    const acc = new Array(24).fill(0);
+    wd.forEach(d => byHour(filt(rows.filter(r => r.adate === d), kind, 'all')).forEach((v,h) => acc[h]+=v));
+    const avg = acc.map(v => v/wd.length);
+    const m = Math.max(...avg);
+    return m > 0 ? `${avg.indexOf(m)}時（${m.toFixed(1)}）` : '—';
+  };
+  host.innerHTML = `
+    <div class="banner warn"><span>⚠</span><div>目前僅 <b>${wd.length}</b> 個常態工作日（已排除特殊日），
+      規律未穩，數值僅供參考。累積滿一個月後此區塊改以分位校準。</div></div>
+    <div class="scrollx"><table class="tbl">
+      <thead><tr><th class="l">類型</th><th>平均每日起飛</th><th>平均每日降落</th>
+        <th>平均每日合計</th><th>平均尖峰時段</th></tr></thead>
+      <tbody>${[['cargo','貨運'],['pax','客運']].map(([k,n]) => `
+        <tr><td class="l"><b>${n}</b></td>
+          <td>${cell(k,'DEP').toFixed(1)}</td>
+          <td>${cell(k,'ARR').toFixed(1)}</td>
+          <td><b>${cell(k,'all').toFixed(1)}</b></td>
+          <td>${peak(k)}</td></tr>`).join('')}
+      </tbody></table></div>
+    <p class="chint" style="margin-top:8px">母體：週一至五、排除特殊日，共 ${wd.length} 日
+      （${md(wd[0])} – ${md(wd[wd.length-1])}）。</p>`;
+}
+
+/* ================================================================
+   頁籤 2 — 班表數據分析
+   ================================================================ */
+const PAL = ['#2563eb','#0f766e','#ea8c00','#7c5cd6','#db2777','#0891b2','#65a30d','#c2410c',
+             '#4f46e5','#0d9488','#b45309','#9333ea','#e11d48','#0369a1','#4d7c0f','#a16207'];
+const NOPT = '.';                                  // 缺值航點代碼
+const CMAP = new Map();                            // 全域配色表：同一代碼永遠同色
+function colorOf(key, seed){
+  if (key === NOPT || key === '其他') return CFG.other;
+  if (!CMAP.has(key)){
+    // 以字串雜湊選色 → 同一機場代碼在「目的地」與「來源地」兩圖必為同色
+    let h = 0; for (const ch of String(key)) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+    CMAP.set(key, PAL[(h + (seed||0)) % PAL.length]);
+  }
+  return CMAP.get(key);
+}
+const labelOf = k => k === NOPT ? '未知（.）' : k;
+
+/** 計數 → [{label,value,color}] 由多至少 */
+function tally(rows, pick, seed){
+  const m = new Map();
+  rows.forEach(r => { const k = pick(r); if (k == null || k === '') return; m.set(k, (m.get(k)||0)+1); });
+  return [...m.entries()].sort((a,b)=>b[1]-a[1])
+    .map(([k,v]) => ({ key:k, label:labelOf(k), value:v, color:colorOf(k, seed) }));
+}
+function barPie(barId, pieId, items){
+  hbarChart($(barId), items, { visible:8 });
+  pieChart($(pieId), items);
+}
+
+const S2 = { sub:'compose', kind:'cargo', airline:null, point:null };
+
+function initT2(){
+  seg($('#t2-sub'), [{v:'compose',label:'航班組成'},{v:'airline',label:'航空公司貨機分析'}],
+      ()=>S2.sub, v => {
+        S2.sub = v; segSync($('#t2-sub'), v);
+        $('#t2-compose').hidden = v !== 'compose';
+        $('#t2-airline').hidden = v !== 'airline';
+        if (v === 'compose') drawT2a(); else drawT2b();
+      });
+  seg($('#t2-kind'), [{v:'cargo',label:'貨機'},{v:'pax',label:'客機'}], ()=>S2.kind,
+      v => { S2.kind = v; segSync($('#t2-kind'), v); drawT2a(); });
+
+  const cargo = flown(DB.clean).filter(r => r.cargo);
+  const als = [...new Set(cargo.map(r => r.airline))]
+    .map(a => ({ a, n: cargo.filter(r => r.airline === a).length }))
+    .sort((x,y) => y.n - x.n);
+  const sel = $('#t2-alsel');
+  sel.innerHTML = als.map(x => {
+    const info = DB.airlines.get(x.a);
+    // 架次不放在選項裡（選單只負責選擇），改於下方航司橫幅呈現
+    return `<option value="${esc(x.a)}">${esc(info && info.zh ? `${x.a}　${info.zh}` : x.a)}</option>`;
+  }).join('');
+  S2.airline = als[0] ? als[0].a : null;
+  sel.value = S2.airline;
+  sel.onchange = () => { S2.airline = sel.value; S2.point = null; drawT2b(); };
+
+  drawT2a();
+}
+
+function drawT2a(){
+  const rows = flown(DB.clean).filter(r => S2.kind === 'cargo' ? r.cargo : !r.cargo);
+
+  // 母體資訊：統計天數與日期範圍
+  const evDays = DB.dates.filter(d => isExcl(d));
+  $('#t2-pop').innerHTML =
+    `母體：${KIND_LABEL[S2.kind]}實際起降（status = flown）累計 <b>${fmtInt(rows.length)}</b> 架次　·
+     統計 <b>${DB.dates.length}</b> 天（<b>${md(DB.dates[0])} – ${md(DB.dates[DB.dates.length-1])}</b>）　·
+     照實呈現，未排除特殊日${evDays.length ? `（含 ${evDays.map(md).join('、')} 等 ${evDays.length} 個特殊日）` : ''}。`;
+
+  barPie('#t2-al-bar',  '#t2-al-pie',  tally(rows, r => r.airline, 0));
+  barPie('#t2-ac-bar',  '#t2-ac-pie',  tally(rows, r => r.ac, 7));
+  // 目的地看起飛的 ArrivalAirport；來源地看降落的 DepartureAirport；共用 CMAP → 同代碼同色
+  barPie('#t2-dst-bar', '#t2-dst-pie', tally(rows.filter(r => r.dir === 'DEP'), r => r.arr, 3));
+  barPie('#t2-src-bar', '#t2-src-pie', tally(rows.filter(r => r.dir === 'ARR'), r => r.dep, 3));
+}
+
+function drawT2b(){
+  const A = S2.airline;
+  const rows = flown(DB.clean).filter(r => r.cargo && r.airline === A);
+  const info = DB.airlines.get(A);
+
+  // 航司橫幅：對照表未接上時降級為只顯示代碼
+  $('#t2-banner').innerHTML = info
+    ? `<div class="ctitle"><h2 style="font-size:20px">${esc(A)}</h2>
+         <span style="font-size:15px;font-weight:600">${esc(info.zh||'')}</span></div>
+       <p class="chint" style="font-size:12.5px">${esc(info.en||'')}
+         ${info.hub ? `　·　主要基地／樞紐：<b>${esc(info.hub)}</b>` : ''}
+         　·　貨機已飛 <b>${rows.length}</b> 架次</p>`
+    : `<div class="ctitle"><h2 style="font-size:20px">${esc(A)}</h2></div>
+       <p class="chint">貨機已飛 <b>${rows.length}</b> 架次</p>
+       <div class="banner info" style="margin-top:9px"><span>ℹ️</span><div>${
+         DB.airlines.size
+           // 對照表已接上，但查無此代碼 —— 與「整張表沒接上」是不同的問題，訊息要分開
+           ? `<b>${esc(A)}</b> 不在「航空公司對照表」中，故無中文名／英文名／樞紐機場。
+              在對照表新增一列 <b>${esc(A)}</b> 即會自動顯示。`
+           : '尚未接上「航空公司對照表」，暫僅顯示 IATA 代碼。'
+       }</div></div>`;
+
+  // 2-3 主要機型
+  const acs = tally(rows, r => r.ac, 7);
+  $('#t2-actbl').innerHTML = acs.length ? `<div class="scrolly" style="max-height:200px">
+    <table class="tbl"><thead><tr><th class="l">機型</th><th>架次</th></tr></thead>
+    <tbody>${acs.map(d => `<tr><td class="l">${esc(d.label)}</td><td>${d.value}</td></tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty">無資料</div>';
+
+  // 2-4 主要航點（可點按鈕）
+  const pts = tally(rows, r => r.dir === 'DEP' ? r.arr : r.dep, 3);
+  $('#t2-pttbl').innerHTML = pts.length ? `<div class="scrolly" style="max-height:200px">
+    <div class="chips">${pts.map(d =>
+      `<button class="chip" data-pt="${esc(d.key)}" aria-pressed="${S2.point===d.key}"
+        >${esc(d.label)}　${d.value}</button>`).join('')}</div></div>` : '<div class="empty">無資料</div>';
+  $$('#t2-pttbl .chip').forEach(b => b.onclick = () => {
+    S2.point = (S2.point === b.dataset.pt) ? null : b.dataset.pt;   // 再點取消
+    drawT2b();
+  });
+
+  drawT2hm(rows);
+}
+
+function drawT2hm(rows){
+  const P = S2.point;
+  // 該司自身的分位 → 班次少的航司門檻自動降低
+  const build = dir => {
+    const g  = Array.from({length:7}, () => new Array(24).fill(0));
+    const hi = Array.from({length:7}, () => new Array(24).fill(false));
+    rows.filter(r => r.dir === dir).forEach(r => {
+      if (!r.adate || r.ahour == null) return;
+      const d = dowIdx(r.adate);
+      g[d][r.ahour]++;
+      if (P && (dir === 'DEP' ? r.arr : r.dep) === P) hi[d][r.ahour] = true;
+    });
+    return { g, hi };
+  };
+  const D = build('DEP'), R = build('ARR');
+  const heads = Array.from({length:7}, () => '');
+  // 分級同貨機固定門檻，使不同航司之間可直接對照
+  const lv = CARGO_LEVELS;
+  $('#t2-hmkey').innerHTML = hmKey(lv);
+  $('#t2-hm').innerHTML =
+    `<div>${heatmap('起飛', D.g, heads, 'dep', P ? D.hi : null, null, lv)}</div>` +
+    `<div>${heatmap('降落', R.g, heads, 'arr', P ? R.hi : null, null, lv)}</div>`;
+  $('#t2-hlnote').innerHTML = P
+    ? `<div class="banner info"><span>🔍</span><div>目前高亮：<b>${esc(labelOf(P))}</b>
+       航線的航班時段（起飛＝飛往 ${esc(labelOf(P))}，降落＝來自 ${esc(labelOf(P))}），其餘時段淡化。
+       再點一次該航點按鈕可取消。</div></div>` : '';
+}
+
+/* ================================================================
+   頁籤 3 — 貨機延遲分析（僅貨機）
+   ================================================================ */
+/** 六互斥分箱計數 */
+function binCounts(rows){
+  const c = new Array(CFG.bins.length).fill(0);
+  rows.forEach(r => { const i = binOf(r.delay); if (i >= 0) c[i]++; });
+  return c;
+}
+function delayStats(rows){
+  const f = rows.filter(r => r.status === 'flown');
+  const d = f.map(r => r.delay).filter(v => v != null);
+  const over2 = f.filter(r => r.delay > 120).length;
+
+  // 取消或改期比率的分子與分母必須整段落在同一個可信區間內。
+  // 若只縮分子（unresolved 取 7/7 起）而分母的 flown 仍從 7/5 起算，分母會被灌水而低估比率。
+  const wf = f.filter(unresTrusted).length;
+  const wu = rows.filter(r => r.status === 'unresolved' && unresTrusted(r)).length;
+
+  return {
+    n: f.length,                    // 已飛架次：架次類統計，不受缺口影響，仍從 7/5 起
+    med: median(d),
+    over2, over2p: f.length ? over2/f.length*100 : null,
+    unres: wu,                      // 取消或改期數：僅計可信區間
+    unresP: (wf + wu) ? wu/(wf+wu)*100 : null,
+    wBase: wf + wu                  // 該比率的實際母體，供頁面標示以便對帳
+  };
+}
+
+function drawT3(){
+  const cargo = DB.clean.filter(r => r.cargo);
+  const norm  = normal(cargo);
+  const A = delayStats(norm), B = delayStats(cargo);
+
+  // 分兩區塊：延誤類與取消改期類的母體不同（後者另排除資料不可信日）。
+  // 若混在同一串列裡，讀者會很自然地拿「已飛架次」去除「取消或改期數」而對不上帳 ——
+  // 用區塊分隔並各自標明母體，比加一個 † 註腳可靠。
+  // 列名精簡到不換行為止 —— 區塊標頭已載明脈絡（延誤／取消或改期），列名不需重複整串
+  const GROUPS = [
+    { head: s => `延誤　<span style="font-weight:500;opacity:.75">母體 ${fmtInt(s.n)} 班（已飛）</span>`,
+      rows: [
+        ['中位延遲',      s => s.med == null ? '—' : s.med + ' 分'],
+        ['&gt;2hr 佔比',  s => fmtPct(s.over2p)],
+        ['&gt;2hr 架次',  s => fmtInt(s.over2)],
+        ['已飛架次',      s => fmtInt(s.n)]
+      ] },
+    { head: s => `取消或改期　<span style="font-weight:500;opacity:.75">母體 ${fmtInt(s.wBase)} 班</span>`,
+      rows: [
+        ['班次', s => fmtInt(s.unres)],
+        ['比率', s => fmtPct(s.unresP)]
+      ] }
+  ];
+  const col = (cls, head, s) => `<div class="col ${cls}"><div class="ch">${head}</div>
+    ${GROUPS.map(g =>
+      (g.head ? `<div class="sh">${g.head(s)}</div>` : '') +
+      g.rows.map(([k,f]) => `<div class="row"><span class="k">${k}</span><span class="v">${f(s)}</span></div>`).join('')
+    ).join('')}</div>`;
+  $('#t3-dual').innerHTML = col('norm','常態（排除特殊日）', A) + col('all','全部（含特殊日）', B);
+
+  const evDays  = DB.dates.filter(d => isExcl(d));
+  const unDays  = DB.dates.filter(d => modeOf(d) === 'unres');
+  const allDays = DB.dates.length;
+  $('#t3-base').innerHTML =
+    `基準日數：常態 <b>${allDays - evDays.length}</b> 日／全部 <b>${allDays}</b> 日　·
+     特殊日（排除於常態統計）<b>${evDays.length}</b> 日${evDays.length ? '：' + evDays.map(md).join('、') : ''}
+     ${unDays.length ? `<br>「取消或改期」區塊另外排除 <b>${unDays.map(md).join('、')}</b>
+       （${esc(unDays.map(d => evOf(d).cat).filter((v,i,a)=>a.indexOf(v)===i).join('、'))}：TDX 抓取起始於
+       07/06 傍晚，該兩日「表定但未起飛」的班次從未被記錄，且無法回補），故其母體與上方區塊不同。
+       該兩日的<b>架次與延誤資料完好，仍完整納入</b>上方統計。` : ''}`;
+
+  // 3-2a 常態延遲分佈：母體 flown，六互斥分箱，加總 100%
+  const ca = binCounts(norm.filter(r => r.status === 'flown'));
+  pieChart($('#t3-pie-a'),
+    CFG.bins.map((b,i) => ({ label:b.label, value:ca[i], color:b.color })), { group:false, height:280 });
+
+  // 3-2b 真實狀況分佈：母體 flown + unresolved，多一塊「取消或改期」。
+  // 兩者都必須限縮在可信區間內 —— 若 flown 取 7/5 起而 unresolved 取 7/7 起，
+  // 「取消或改期」那一塊的佔比會被低估。
+  const win = cargo.filter(unresTrusted);
+  const cb = binCounts(win.filter(r => r.status === 'flown'));
+  pieChart($('#t3-pie-b'),
+    CFG.bins.map((b,i) => ({ label:b.label, value:cb[i], color:b.color }))
+      .concat([{ label:'取消或改期', value: win.filter(r=>r.status==='unresolved').length,
+                 color:CFG.unresolvedColor }]), { group:false, height:290 });
+  $('#t3-pie-b-note').innerHTML = unDays.length
+    ? `母體 <b>${fmtInt(win.length)}</b> 班，已排除 <b>${unDays.map(md).join('、')}</b>
+       （取消或改期資料未被記錄，無法回補）。3-2a 不含 unresolved，故不受影響、仍為完整母體。`
+    : '';
+
+  // 3-3 各航司延遲狀況（排除特殊日，依架次排序）
+  const byAl = new Map();
+  norm.filter(r => r.status === 'flown').forEach(r =>
+    byAl.set(r.airline, (byAl.get(r.airline)||[]).concat([r])));
+  const list = [...byAl.entries()].sort((a,b) => b[1].length - a[1].length);
+  $('#t3-tbl').innerHTML = `<div class="scrolly" style="max-height:340px"><div class="scrollx">
+    <table class="tbl"><thead><tr>
+      <th class="l">航司</th><th class="l">英文名稱</th><th>架次</th><th>中位延遲</th>
+      ${CFG.bins.map(b => `<th style="border-bottom:2px solid ${b.color}">${b.label}</th>`).join('')}
+    </tr></thead><tbody>
+    ${list.map(([a, rs]) => {
+      const c = binCounts(rs), n = rs.length;
+      const info = DB.airlines.get(a);
+      return `<tr>
+        <td class="l"><b>${esc(a)}</b></td>
+        <td class="l" style="max-width:150px;overflow:hidden;text-overflow:ellipsis">${esc(info && info.en ? info.en : '—')}</td>
+        <td>${n}</td>
+        <td>${median(rs.map(r=>r.delay).filter(v=>v!=null))} 分</td>
+        ${/* 佔比為主要資訊（大而深），架次為輔（小而淡） */''}
+        ${c.map(v => v
+          ? `<td><span class="pri">${(v/n*100).toFixed(0)}%</span><span class="sec">${v} 架</span></td>`
+          : `<td><span class="pri" style="color:var(--ink3);font-weight:400">·</span></td>`).join('')}
+      </tr>`;
+    }).join('')}
+    </tbody></table></div></div>
+    ${DB.airlines.size ? '' : '<p class="chint" style="margin-top:8px">英文名稱待接上「航空公司對照表」後顯示。</p>'}`;
+}
+
+/* ================================================================
+   頁籤 4 — 航班預報
+   ================================================================ */
+const S4 = { kind:'cargo', dir:'all' };
+
+function initT4(){
+  seg($('#t4-kind'), [{v:'all',label:'全部'},{v:'cargo',label:'貨運'},{v:'pax',label:'客運'}],
+      ()=>S4.kind, v => { S4.kind=v; segSync($('#t4-kind'),v); drawT4(); });
+  seg($('#t4-dir'), [{v:'all',label:'起+降'},{v:'DEP',label:'起飛'},{v:'ARR',label:'降落'}],
+      ()=>S4.dir, v => { S4.dir=v; segSync($('#t4-dir'),v); drawT4(); });
+  $('#t4-snap').innerHTML = DB.snapshot
+    ? `快照時間：<b>${DB.snapshot.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</b>（一天抓取一次）`
+    : '';
+  drawT4();
+}
+
+/**
+ * 取某日的預報班次。
+ * 以 forecast_date 比對，而非 day_tag —— day_tag 是產生快照當下的相對標籤，
+ * 快照一過期（例如當日抓取尚未執行）它就是錯的：昨日快照的「D」是昨天，
+ * 若照 tag 取用，會把昨天的班表貼上「今日」的標籤畫出來。forecast_date 才是事實。
+ */
+const fcRows = dateIso => DB.fc.filter(r => r.fdate === dateIso);
+
+/** 該日無預報時，清空圖表並說明，不留舊圖殘影 */
+function fcEmpty(prefix, dateIso, label){
+  $(prefix + '-kpi').innerHTML = '';
+  $(prefix + '-legend').innerHTML = '';
+  $(prefix + '-chart').innerHTML =
+    `<div class="banner warn" style="margin:0"><span>⚠</span><div>
+      <b>${label} ${md(dateIso)} 的預報尚未產生。</b>
+      預報檔目前僅涵蓋 ${DB.fc.length ? [...new Set(DB.fc.map(r=>r.fdate))].sort().map(md).join('、') : '（無資料）'}。
+      每日抓取執行後即會出現。</div></div>`;
+  REG.delete($(prefix + '-chart'));
+}
+
+/** 依任意小時欄位分桶 */
+function bucket(rows, hourKey){
+  const a = new Array(24).fill(0);
+  rows.forEach(r => { const h = r[hourKey]; if (h != null && h >= 0 && h < 24) a[h]++; });
+  return a;
+}
+/**
+ * 尖峰時段。並列的最大值全部列出 —— 只取 indexOf 會固定回傳最小的那個小時，
+ * 例如 0 時與 23 時同為 9 班時只顯示「0時」，讀者會誤以為深夜前段清閒，
+ * 而實際上 23–00 是連續的尖峰帶。
+ */
+const peakOf = arr => {
+  const m = Math.max(...arr);
+  if (!(m > 0)) return '—';
+  const hs = arr.map((v,h) => v === m ? h : -1).filter(h => h >= 0);
+  return (hs.length > 3 ? hs.slice(0,3).join('、') + '…' : hs.join('、')) + '時';
+};
+const sum = arr => arr.reduce((a,b)=>a+b, 0);
+const HOURS = Array.from({length:24}, (_,h) => ({ label:String(h) }));
+
+function kpis(host, items){
+  host.innerHTML = items.map(i =>
+    `<div class="kpi"><div class="k">${i.k}</div>
+      <div class="v${String(i.v).length > 6 ? ' long' : ''}">${i.v}${i.u?`<span class="u">${i.u}</span>`:''}</div>
+     </div>`).join('');
+}
+/** 上週同星期實際分時（照實呈現，含事件日） */
+function lastWeekLine(dateIso){
+  const d7 = addDays(dateIso, -7);
+  const rows = filt(flown(DB.clean).filter(r => r.adate === d7), S4.kind, S4.dir);
+  return { data: bucket(rows, 'ahour'), date: d7, total: rows.length };
+}
+
+function drawT4(){
+  const today = iso(new Date());
+  const Y = addDays(today, -1), T = today, N = addDays(today, 1);
+  $('#t4a-date').textContent = md(Y) + '（' + WD[dowOf(Y)] + '）';
+  $('#t4b-date').textContent = md(T) + '（' + WD[dowOf(T)] + '）';
+  $('#t4c-date').textContent = md(N) + '（' + WD[dowOf(N)] + '）';
+
+  // 快照過期：日期雖以 forecast_date 對齊，仍須讓使用者知道自己看的是幾時產生的預報
+  const snapDay = DB.snapshot ? iso(DB.snapshot) : null;
+  $('#t4-stale').innerHTML = (snapDay && snapDay < today)
+    ? `<div class="banner warn"><span>⚠</span><div>
+        <b>預報快照為 ${md(snapDay)} 產生，今日（${md(today)}）的抓取尚未執行。</b>
+        以下「今日」為 ${md(snapDay)} 時對本日的預估，未反映此後的異動；「明日」則可能尚無資料。
+        本頁一律以 <code>forecast_date</code> 對齊日期，不會把舊日期的班表當成今日呈現。</div></div>`
+    : '';
+
+  drawT4a(Y); drawT4b(T); drawT4c(N);
+}
+
+/* 4-1 昨日回顧：用 clean 回推，不需另存 forecast 歷史 */
+function drawT4a(Y){
+  const sc = scopeName(S4.kind, S4.dir);
+  const all   = filt(DB.clean.filter(r => r.fdate === Y), S4.kind, S4.dir);        // 預期＝全部班
+  const done  = filt(flown(DB.clean).filter(r => r.adate === Y), S4.kind, S4.dir); // 實績
+  const unres = all.filter(r => r.status === 'unresolved').length;
+
+  const actual = bucket(done, 'ahour');
+
+  // 預期班表＝昨日全部班（flown+cancelled+unresolved），以表定時刻分桶。
+  // 昨日已成定局，非預報，故用實心而不用斜紋（斜紋只保留給「尚未發生」的班次）。
+  const mk = d => bucket(all.filter(r => S4.dir === 'all' ? r.dir === d : true), 'schedH');
+  const series = S4.dir === 'all'
+    ? [ { name:'預期班表·起飛', color:cssVar('--dep'), data: mk('DEP') },
+        { name:'預期班表·降落', color:cssVar('--arr'), data: mk('ARR') } ]
+    : [ { name:'預期班表·'+DIR_LABEL[S4.dir],
+          color: S4.dir==='DEP'?cssVar('--dep'):cssVar('--arr'), data: bucket(all, 'schedH') } ];
+
+  const lines = [{ name:'實際起降', color:'#111', data: actual }];
+  barChart($('#t4a-chart'), { cats: HOURS, series: resolveColors(series), lines, height:290,
+                              yTitle:'班次數', xTitle:'時間（時）' });
+  legend($('#t4a-legend'),
+    series.map(s => ({ name:s.name, color:s.color }))
+      .concat([{ name:lines[0].name, color:'#111', line:true }]), sc);
+
+  kpis($('#t4a-kpi'), [
+    { k:'預估總計', v: fmtInt(all.length), u:'班' },
+    { k:'實際總計', v: fmtInt(done.length), u:'班' },
+    { k:'預估尖峰', v: peakOf(bucket(all,'schedH')) },
+    { k:'實際尖峰', v: peakOf(actual) },
+    // 隨起降切換調整數值（起飛只計起飛、降落只計降落）
+    { k:'取消或改期', v: fmtInt(unres), u:'班' }
+  ]);
+
+  // 預期以表定日計、實績以實際起降日計，跨日航班會落在兩個母體的邊界外，
+  // 使「預估 − 取消或改期 ≠ 實際」。差額雖小但每天都會出現，不說明會被當成算錯。
+  const schedFlown = all.filter(r => r.status === 'flown').length;
+  const gap = schedFlown - done.length;
+  $('#t4a-gap').innerHTML = gap
+    ? `預估 ${fmtInt(all.length)} 班中，${fmtInt(schedFlown)} 班起飛、${fmtInt(unres)} 班取消或改期。
+       「實際總計 ${fmtInt(done.length)}」與折線以<b>實際起降日</b>分桶，故差 ${fmtInt(Math.abs(gap))} 班 ——
+       該${fmtInt(Math.abs(gap))}班表定於 ${md(Y)}，實際起降跨至${gap > 0 ? '隔日' : '前一日'}。`
+    : '';
+}
+
+/* 4-2 今日 */
+function drawT4b(T){
+  const sc = scopeName(S4.kind, S4.dir);
+  const src = fcRows(T);
+  if (!src.length) return fcEmpty('#t4b', T, '今日');
+  const rows = filt(src, S4.kind, S4.dir);
+  const mk = (d, st) => bucket(rows.filter(r =>
+    (S4.dir === 'all' ? r.dir === d : true) && r.st === st), 'hour');
+
+  let series;
+  if (S4.dir === 'all'){
+    series = [
+      { name:'已發生·起飛', color:cssVar('--dep'), data: mk('DEP','actual') },
+      { name:'預期·起飛',   color:cssVar('--dep'), hatch:true, data: mk('DEP','scheduled') },
+      { name:'已發生·降落', color:cssVar('--arr'), data: mk('ARR','actual') },
+      { name:'預期·降落',   color:cssVar('--arr'), hatch:true, data: mk('ARR','scheduled') }
+    ];
+  } else {
+    const c = S4.dir === 'DEP' ? cssVar('--dep') : cssVar('--arr');
+    series = [
+      { name:'已發生·'+DIR_LABEL[S4.dir], color:c, data: bucket(rows.filter(r=>r.st==='actual'),'hour') },
+      { name:'預期·'+DIR_LABEL[S4.dir],   color:c, hatch:true, data: bucket(rows.filter(r=>r.st==='scheduled'),'hour') }
+    ];
+  }
+  const lw = lastWeekLine(T);
+  const lines = [{ name:`上週同星期實際（${md(lw.date)}）`, color:'#111', dash:'4 3', data: lw.data }];
+  barChart($('#t4b-chart'), { cats:HOURS, series, lines, height:290,
+                              yTitle:'班次數', xTitle:'時間（時）' });
+  legend($('#t4b-legend'),
+    series.map(s => ({ name:s.name, color:s.color, hatch:s.hatch }))
+      .concat([{ name:lines[0].name, color:'#111', line:true }]), sc);
+
+  const tot = series.reduce((s,x) => s + sum(x.data), 0);
+  const all = new Array(24).fill(0);
+  series.forEach(x => x.data.forEach((v,h) => all[h] += v));
+  kpis($('#t4b-kpi'), [
+    { k:'預估總計',     v: fmtInt(tot), u:'班' },
+    { k:'預估尖峰時段', v: peakOf(all) },
+    { k:'上週同星期總計', v: fmtInt(lw.total), u:'班' }
+  ]);
+}
+
+/* 4-3 明日：全部為預期 */
+function drawT4c(N){
+  const sc = scopeName(S4.kind, S4.dir);
+  const src = fcRows(N);
+  if (!src.length) return fcEmpty('#t4c', N, '明日');
+  const rows = filt(src, S4.kind, S4.dir);
+  const mk = d => bucket(rows.filter(r => S4.dir === 'all' ? r.dir === d : true), 'hour');
+  const series = S4.dir === 'all'
+    ? [ { name:'預期·起飛', color:cssVar('--dep'), hatch:true, data: mk('DEP') },
+        { name:'預期·降落', color:cssVar('--arr'), hatch:true, data: mk('ARR') } ]
+    : [ { name:'預期·'+DIR_LABEL[S4.dir], hatch:true,
+          color: S4.dir==='DEP'?cssVar('--dep'):cssVar('--arr'), data: bucket(rows,'hour') } ];
+
+  const lw = lastWeekLine(N);
+  const lines = [{ name:`上週同星期實際（${md(lw.date)}）`, color:'#111', dash:'4 3', data: lw.data }];
+  barChart($('#t4c-chart'), { cats:HOURS, series, lines, height:290,
+                              yTitle:'班次數', xTitle:'時間（時）' });
+  legend($('#t4c-legend'),
+    series.map(s => ({ name:s.name, color:s.color, hatch:true }))
+      .concat([{ name:lines[0].name, color:'#111', line:true }]), sc);
+
+  const all = new Array(24).fill(0);
+  series.forEach(x => x.data.forEach((v,h) => all[h] += v));
+  kpis($('#t4c-kpi'), [
+    { k:'預估總計',     v: fmtInt(sum(all)), u:'班' },
+    { k:'預估尖峰時段', v: peakOf(all) },
+    { k:'上週同星期總計', v: fmtInt(lw.total), u:'班' }
+  ]);
+}
+
+/* ================================================================
+   啟動
+   ================================================================ */
+/**
+ * 失敗訊息必須指向真正的成因。
+ * 「Failed to fetch」在 file:// 下幾乎必然是來源為 null 被 CORS 擋掉，與共用設定無關 ——
+ * 若一律叫使用者去檢查共用設定，會把人帶往錯的方向。
+ */
+function fatal(msg){
+  const isFile  = location.protocol === 'file:';
+  const netFail = /Failed to fetch|NetworkError|Load failed/i.test(msg);
+  let hint;
+  if (isFile && netFail){
+    hint = `<b>成因：這個頁面是用 <code>file://</code> 直接開啟的。</b><br>
+      瀏覽器會把本機檔案的來源視為 <code>null</code>，Google 不會對它發出跨域許可，
+      因此讀不到 Sheet。<b>這與共用設定無關，改權限沒有用。</b><br><br>
+      <b>解法一（正式）</b>：部署到 GitHub Pages，用 https 網址開啟。<br>
+      <b>解法二（本機預覽）</b>：在這個資料夾執行
+      <code>python3 -m http.server 8000</code>，再開
+      <code>http://localhost:8000</code>。`;
+  } else if (netFail){
+    hint = `無法連線到 Google。請確認網路，並確認四個 Sheet 的共用設定為
+      「知道連結的任何人 → 檢視者」。`;
+  } else {
+    hint = `請確認 Google Sheet 的共用設定為「知道連結的任何人 → 檢視者」，且分頁名稱未被更動。`;
+  }
+  $('#boot').hidden = true;
+  $('#fatal').innerHTML = `<div class="banner err banner-fixed"><span>⚠️</span><div>
+    <b>資料載入失敗</b>　<span style="opacity:.75">${esc(msg)}</span>
+    <div style="margin-top:7px;line-height:1.65">${hint}</div>
+  </div></div>`;
+}
+
+async function boot(){
+  try{
+    const [c, f, e, a] = await Promise.all([
+      gviz('clean'), gviz('forecast'), gviz('events'),
+      gviz('airlines').catch(() => null)      // 對照表未接上時不阻斷整頁
+    ]);
+    loadClean(c); loadForecast(f); loadEvents(e); loadAirlines(a);
+
+    if (!DB.dates.length) return fatal('clean 分頁沒有可用的 actual_date（當日資料未定稿不列入）。');
+
+    $('#boot').hidden = true;
+    $('#main').hidden = false;
+
+    const last = DB.dates[DB.dates.length-1];
+    $('#freshness').innerHTML =
+      `歷史 ${md(DB.dates[0])}–${md(last)}（${DB.dates.length} 日）` +
+      (DB.snapshot ? `　·　預報快照 ${DB.snapshot.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}` : '');
+
+    // 5 資料缺口（CFG.gaps 為本檔內建文案，非外部資料，故允許內嵌標記）
+    $('#t5-gaps').innerHTML = '<b>已知資料缺口</b><ul style="margin:6px 0 0 16px;line-height:1.75">' +
+      CFG.gaps.map(g => `<li style="margin-bottom:5px">${g}</li>`).join('') + '</ul>';
+
+    initT1(); initT2(); drawT3(); initT4();
+
+    // 頁籤切換（支援 #t3 深層連結，可直接把某頁加入書籤）
+    const go = (id, push) => {
+      if (!$('#'+id)) id = 't1';
+      $$('#nav button').forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === id)));
+      $$('.panel').forEach(p => p.classList.toggle('on', p.id === id));
+      // 切到才重繪：隱藏容器 clientWidth 為 0，尺寸會算錯
+      REG.forEach(h => { if (h.isConnected && h.offsetParent) redraw(h); });
+      if (push) history.replaceState(null, '', '#' + id);
+      scrollTo({ top:0, behavior:'instant' });
+    };
+    $$('#nav button').forEach(b => b.onclick = () => go(b.dataset.tab, true));
+    addEventListener('hashchange', () => go(location.hash.slice(1), false));
+    go(location.hash.slice(1) || 't4', false);        // 預設落在「每日航班預報」
+  } catch(err){
+    console.error(err);
+    fatal(err.message || String(err));
+  }
+}
+boot();
+</script>
+</body>
+</html>
