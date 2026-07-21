@@ -32,6 +32,8 @@ main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 16px;margin-bottom:20px}
 @media(min-width:600px){.card{padding:20px 22px}}
 .card h2{font-family:"Space Grotesk";font-size:15.5px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fc-title{font-size:19px;font-weight:700;color:var(--navy)}
+.fc-date{font-size:13px;color:var(--muted);font-weight:500}
 .card .desc{font-size:12.5px;color:var(--muted);margin:6px 0 16px;max-width:74ch}
 .warn{background:#fbeae8;border:1px solid #e6b0aa;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#8a3129;margin-bottom:16px;display:flex;gap:8px;align-items:center}
 .err-banner{background:#fbeae8;border:1px solid #e6b0aa;color:#8a3129;padding:14px 18px;margin:16px auto;max-width:1180px;border-radius:8px;font-size:13px;display:none}
@@ -51,6 +53,8 @@ select{padding:7px 12px;border:1px solid var(--line);border-radius:7px;backgroun
 .chart-sm{height:280px}
 .comprow{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;align-items:center}
 @media(max-width:820px){.comprow{grid-template-columns:1fr}}
+.comprow2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:820px){.comprow2{grid-template-columns:1fr}}
 .barbox{max-height:232px;overflow-y:auto;overflow-x:hidden;padding-right:4px}
 .barbox::-webkit-scrollbar{width:7px}.barbox::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 .barinner{position:relative;width:100%}
@@ -131,29 +135,28 @@ tr.statrow-click.sel td{background:var(--navy);color:#fff}
       <div class="seg" id="catSel"><button data-v="cargo" class="on">貨運</button><button data-v="pax">客運</button><button data-v="all">全部</button></div>
       <div class="seg" id="dirSel"><button data-v="both" class="on">起+降</button><button data-v="DEP">起飛</button><button data-v="ARR">降落</button></div>
     </div>
-    <p class="desc" style="margin:6px 0 0">起飛（深色）與降落（淺色）以顏色區分；今日／明日的預期班次為斜紋，實績為實心。</p>
-    <p class="desc" style="margin:4px 0 0">資料快照時間：<span class="mono" id="snap">–</span>（一天抓取一次）</p>
+    <p class="desc" style="margin:6px 0 0">資料快照時間：<span class="mono" id="snap">–</span>（一天抓取一次）</p>
   </div>
   <div class="card">
-    <h2><span id="ystTitle">–</span> 昨日回顧</h2>
-    <p class="desc">長條＝昨日預期班表（表定時刻）；折線＝實際起降（實際時刻）。對照原訂與實際的落差。</p>
+    <h2><span class="fc-title">昨日班表回顧</span> <span id="ystTitle" class="mono fc-date">–</span></h2>
     <div class="kpi-row" id="ystKpi"></div>
     <div class="legend" id="ystLegend"></div>
     <div class="chart-wrap"><canvas id="ystChart"></canvas></div>
+    <div class="chart-note">長條＝昨日預期班表（表定時刻）；折線＝實際起降（實際時刻）。</div>
   </div>
   <div class="card">
-    <h2><span id="dTitle">–</span> 今日</h2>
-    <p class="desc">實心＝已發生，斜紋＝預期（尚未起降）。折線為上週同星期實際分時。</p>
+    <h2><span class="fc-title">今日班表預估</span> <span id="dTitle" class="mono fc-date">–</span></h2>
     <div class="kpi-row" id="dKpi"></div>
     <div class="legend" id="dLegend"></div>
     <div class="chart-wrap"><canvas id="dChart"></canvas></div>
+    <div class="chart-note">實心＝已發生，斜紋＝預期（尚未起降）。折線為上週同星期實際分時。</div>
   </div>
   <div class="card">
-    <h2><span id="d1Title">–</span> 明日</h2>
-    <p class="desc">明日全部為預期班表（斜紋）。折線為上週同星期實際分時。<b>明日機型多未定，架次為預估。</b></p>
+    <h2><span class="fc-title">明日班表預估</span> <span id="d1Title" class="mono fc-date">–</span></h2>
     <div class="kpi-row" id="d1Kpi"></div>
     <div class="legend" id="d1Legend"></div>
     <div class="chart-wrap"><canvas id="d1Chart"></canvas></div>
+    <div class="chart-note">明日全部為預期班表（斜紋）。折線為上週同星期實際分時。</div>
   </div>
 </section>
 
@@ -186,7 +189,7 @@ tr.statrow-click.sel td{background:var(--navy);color:#fff}
     <h2>每週分時架次熱力圖</h2>
     <p class="desc">選特定週次（與上圖連動），看該週星期 × 時段的真實架次密度。無航班的格子顯示 0、不塗色；分級標準見圖例。</p>
     <div class="ctrls"><div class="seg" id="t1hcat"><button data-v="cargo" class="on">貨運</button><button data-v="pax">客運</button></div></div>
-    <div class="comprow" style="align-items:start;gap:26px">
+    <div class="comprow2" style="align-items:start">
       <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">起飛 DEP</div><div id="t1heat_DEP"></div></div>
       <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">降落 ARR</div><div id="t1heat_ARR"></div></div>
     </div>
@@ -210,18 +213,17 @@ tr.statrow-click.sel td{background:var(--navy);color:#fff}
   </div>
 
   <div id="p2-airline" class="subpanel">
-    <div class="card">
-      <div class="ctrls" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">查詢航空公司（僅貨運）</span><select id="t3sel"></select><span class="mono" id="t3n" style="color:var(--muted);font-size:13px"></span></div>
-      <div id="t3banner" class="banner3"></div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="ctrls" style="margin-bottom:0"><span style="font-size:13px;color:var(--muted)">查詢航空公司（僅貨運）</span><select id="t3sel"></select><span class="mono" id="t3n" style="color:var(--muted);font-size:13px"></span></div>
     </div>
-    <div class="comprow" style="align-items:stretch">
+    <div id="t3banner" class="banner3" style="margin-bottom:14px"></div>
+    <div class="comprow2" style="align-items:stretch">
       <div class="card"><h2>主要機型</h2><div id="t3actype" class="taglist" style="margin-top:12px"></div></div>
       <div class="card"><h2>主要航點</h2><p class="desc" style="margin:6px 0 12px">點選航點列可在下方熱力圖標示該航線的航班時段，再點一次取消。</p><div id="t3peer" class="taglist"></div></div>
     </div>
     <div class="card">
-      <h2>週間分時起降熱力圖</h2>
-      <p class="desc">該司星期 × 時段起降密度（累計全部資料），分級標準與「起降架次統計」頁一致；班次少者格子多為低或無航班，屬正常現象。</p>
-      <div class="comprow" style="align-items:start;gap:26px">
+      <div class="ctrls"><h2 style="margin:0">週間分時起降熱力圖</h2><select id="t3weekSel"></select></div>
+      <div class="comprow2" style="align-items:start">
         <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">起飛 DEP</div><div id="t3heat_DEP"></div><div class="heatlegend" id="t3legend_DEP"></div></div>
         <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">降落 ARR</div><div id="t3heat_ARR"></div><div class="heatlegend" id="t3legend_ARR"></div></div>
       </div>
@@ -237,7 +239,7 @@ tr.statrow-click.sel td{background:var(--navy);color:#fff}
     <div id="t4kpi2"></div>
     <div class="chart-note" id="p3warn" style="margin-top:16px"></div>
   </div>
-  <div class="comprow" style="align-items:start">
+  <div class="comprow2" style="align-items:start">
     <div class="card"><h2>常態延遲分佈</h2><p class="desc">已飛貨機航班的誤點分佈（排除特殊日）。六個互斥區間加總 100%。</p><div class="chart-wrap chart-sm"><canvas id="pieA"></canvas></div></div>
     <div class="card"><h2>真實狀況分佈</h2><p class="desc">所有預期貨機航班的結果（含特殊日），多一塊灰色「取消或改期」。</p><div class="chart-wrap chart-sm"><canvas id="pieB"></canvas></div></div>
   </div>
@@ -614,20 +616,28 @@ function drawPie(id, arr, colorFn){
   CH[id] = new Chart(document.getElementById(id), {type:'doughnut', data:{labels, datasets:[{data:m.map(x=>x.v), backgroundColor:cols, borderColor:'#fffdf8', borderWidth:2}]},
     options:{responsive:true, maintainAspectRatio:false, cutout:'46%', layout:{padding:46},
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.label+' '+c.parsed+' ('+Math.round(100*c.parsed/tot)+'%)'}}}},
-    plugins:[{id:'lbl', afterDraw(c){
-      const {ctx}=c; const meta=c.getDatasetMeta(0); ctx.save(); ctx.textAlign='center';
-      let vi=0;
-      meta.data.forEach((el,i)=>{
-        const p=100*m[i].v/tot; if(p<3) return;
-        // 相鄰小扇形標籤易重疊，依可見順序交錯遠近半徑分兩圈錯開。
-        const a=(el.startAngle+el.endAngle)/2; const r=el.outerRadius+(vi%2===0?14:30);
-        vi++;
-        const x=el.x+Math.cos(a)*r, y=el.y+Math.sin(a)*r;
-        ctx.font='600 12px IBM Plex Mono'; ctx.fillStyle='#14202e'; ctx.fillText(labels[i], x, y-5);
-        ctx.font='400 12px IBM Plex Mono'; ctx.fillStyle=C.muted; ctx.fillText(Math.round(p)+'%', x, y+7);
-      });
-      ctx.restore();
-    }}]});
+    plugins:[{id:'lbl', afterDraw(c){ drawPieLabels(c, m.map((x,i)=>({i, v:x.v})), tot, labels, 3); }}]});
+}
+// 相鄰扇形角度差過小容易標籤重疊，量測與左右鄰居的夾角，過近才錯開遠近半徑（比單純交錯更準）。
+function drawPieLabels(chart, items, tot, labels, minPct){
+  const {ctx}=chart; const meta=chart.getDatasetMeta(0); ctx.save(); ctx.textAlign='center';
+  const visible = items.filter(it=>100*it.v/tot>=minPct).map(it=>({...it, a:(meta.data[it.i].startAngle+meta.data[it.i].endAngle)/2}));
+  const TWO_PI = Math.PI*2;
+  visible.forEach((v,vi)=>{
+    const prev = visible[(vi-1+visible.length)%visible.length];
+    const next = visible[(vi+1)%visible.length];
+    let gapPrev = v.a-prev.a; if(gapPrev<0) gapPrev+=TWO_PI;
+    let gapNext = next.a-v.a; if(gapNext<0) gapNext+=TWO_PI;
+    const crowded = visible.length>1 && Math.min(gapPrev,gapNext) < 0.4;
+    const far = crowded && vi%2===1;
+    const el = meta.data[v.i];
+    const r = el.outerRadius + (far ? 30 : 14);
+    const x=el.x+Math.cos(v.a)*r, y=el.y+Math.sin(v.a)*r;
+    const p = 100*v.v/tot;
+    ctx.font='600 12px IBM Plex Mono'; ctx.fillStyle='#14202e'; ctx.fillText(labels[v.i], x, y-5);
+    ctx.font='400 12px IBM Plex Mono'; ctx.fillStyle=C.muted; ctx.fillText(Math.round(p)+'%', x, y+7);
+  });
+  ctx.restore();
 }
 function airportOrder(isCargoBool){
   const counts = new Map();
@@ -769,7 +779,7 @@ function renderT1Warn(){
   const box = document.getElementById('p1warn');
   if(!evs.length){ box.style.display='none'; return; }
   box.style.display='flex';
-  box.innerHTML = '⚠ 特殊事件標記：'+evs.map(e=>e.dateStr.slice(5)+' '+e.category+'（'+(e.excludeRaw||'僅標記，不排除')+'）').join('；')+'。本頁為真實架次（status=flown），僅特殊日於日期旁標示 ⚠，不受任何排除設定影響。';
+  box.innerHTML = '⚠ 特殊事件標記：'+evs.map(e=>e.dateStr.slice(5)+' '+e.category).join('；')+'。';
 }
 
 function renderT1Avg(){
@@ -852,18 +862,27 @@ function routePoint(r){ return r.dir==='DEP' ? r.arrAp : r.depAp; }
 function airlineInfo(code){ return AIRLINE_REF.get(code) || {zh:'—', en:'—', hub:'—'}; }
 
 let t3cur = null, t3peerSel = null;
-function airlineHeatMatrix(code, dir){
+function weekDateSet(weekKey){
+  if(!weekKey) return null;
+  const wk = weekList().find(x=>x.key===weekKey);
+  return wk ? new Set(wk.dowDates.filter(d=>d)) : null;
+}
+function airlineHeatMatrix(code, dir, weekKey){
   const m = [...Array(24)].map(()=>Array(7).fill(0));
+  const dateSet = weekDateSet(weekKey);
   CLEAN.forEach(r=>{
     if(r.status!=='flown'||!r.isCargo||r.airline!==code||r.dir!==dir||r.actualHour==null) return;
+    if(dateSet && !dateSet.has(r.actualDateStr)) return;
     m[r.actualHour][dowIndexMon0(r.actualDateStr)]++;
   });
   return m;
 }
-function airlineRouteHL(code, peer, dir){
+function airlineRouteHL(code, peer, dir, weekKey){
   const m = [...Array(24)].map(()=>Array(7).fill(0));
+  const dateSet = weekDateSet(weekKey);
   CLEAN.forEach(r=>{
     if(r.status!=='flown'||!r.isCargo||r.airline!==code||r.dir!==dir||r.actualHour==null) return;
+    if(dateSet && !dateSet.has(r.actualDateStr)) return;
     if(routePoint(r)!==peer) return;
     m[r.actualHour][dowIndexMon0(r.actualDateStr)] = 1;
   });
@@ -890,8 +909,7 @@ function drawT3(al){
   const rows = CLEAN.filter(r=>r.status==='flown'&&r.isCargo&&r.airline===al);
   t3cur = { al, n: rows.length,
     actype: groupCount(rows, r=>r.acType),
-    peer: groupCount(rows, r=>routePoint(r)),
-    heat_DEP: airlineHeatMatrix(al,'DEP'), heat_ARR: airlineHeatMatrix(al,'ARR') };
+    peer: groupCount(rows, r=>routePoint(r)) };
   t3peerSel = null;
   drawBanner(al);
   document.getElementById('t3n').textContent = '累計 '+t3cur.n+' 班';
@@ -909,11 +927,13 @@ function drawT3(al){
 }
 function drawT3heat(){
   const d = t3cur;
+  const weekKey = document.getElementById('t3weekSel').value || null;
+  const wk = weekKey ? weekList().find(x=>x.key===weekKey) : null;
   // 貨機分析熱力圖分級標準與「起降架次統計」頁的貨運熱力圖相同（固定：無航班/低1–2/中3–4/高5+）。
   ['DEP','ARR'].forEach(dir=>{
-    const m = d['heat_'+dir];
-    const hl = t3peerSel ? airlineRouteHL(d.al, t3peerSel, dir) : null;
-    document.getElementById('t3heat_'+dir).innerHTML = renderHeatHTML(m, cargoHeatClass, HEAT_CARGO, null, hl);
+    const m = airlineHeatMatrix(d.al, dir, weekKey);
+    const hl = t3peerSel ? airlineRouteHL(d.al, t3peerSel, dir, weekKey) : null;
+    document.getElementById('t3heat_'+dir).innerHTML = renderHeatHTML(m, cargoHeatClass, HEAT_CARGO, wk?wk.dowDates:null, hl);
     document.getElementById('t3legend_'+dir).innerHTML = cargoHeatLegend(HEAT_CARGO);
   });
   document.getElementById('t3hnote').textContent = t3peerSel ? ('已標示 '+t3peerSel+' 航線的航班時段（深藍）') : '';
@@ -921,10 +941,15 @@ function drawT3heat(){
 
 function initTab2(){
   const dates = availableDates();
-  document.getElementById('p2popInfo').textContent = '累計資料：'+(dates[0]||'–')+' 至 '+(dates[dates.length-1]||'–')+'，共 '+dates.length+' 天。左為架次橫條（高至低、全部可捲動），右為佔比圓餅（標於圖上，<3% 併「其他」）。';
+  document.getElementById('p2popInfo').textContent = '累計資料：'+(dates[0]||'–')+' 至 '+(dates[dates.length-1]||'–')+'，共 '+dates.length+' 天。';
 
   seg('t2catsel', v=>{ t2cat=v; drawT2(); });
   drawT2();
+
+  const weeks = weekList();
+  const t3wsel = document.getElementById('t3weekSel');
+  t3wsel.innerHTML = '<option value="">累計全部</option>' + weeks.map(w=>'<option value="'+w.key+'">'+w.label+'</option>').join('');
+  t3wsel.onchange = drawT3heat;
 
   const cargoAirlines = compAirline(true);
   const sel = document.getElementById('t3sel');
@@ -986,17 +1011,7 @@ function drawPieDelay(id, labels, data, cols){
   CH[id] = new Chart(document.getElementById(id), {type:'doughnut', data:{labels, datasets:[{data, backgroundColor:cols, borderColor:'#fffdf8', borderWidth:2}]},
     options:{responsive:true, maintainAspectRatio:false, cutout:'46%', layout:{padding:46},
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.label+' '+c.parsed+' ('+Math.round(100*c.parsed/tot)+'%)'}}}},
-    plugins:[{id:'l', afterDraw(c){
-      const {ctx}=c; const meta=c.getDatasetMeta(0); ctx.save(); ctx.textAlign='center';
-      meta.data.forEach((el,i)=>{
-        const p = tot ? 100*data[i]/tot : 0;
-        const a=(el.startAngle+el.endAngle)/2; const r=el.outerRadius+(i%2===0?14:30);
-        const x=el.x+Math.cos(a)*r, y=el.y+Math.sin(a)*r;
-        ctx.font='600 12px IBM Plex Mono'; ctx.fillStyle='#14202e'; ctx.fillText(labels[i], x, y-5);
-        ctx.font='400 12px IBM Plex Mono'; ctx.fillStyle=C.muted; ctx.fillText(Math.round(p)+'%', x, y+7);
-      });
-      ctx.restore();
-    }}]});
+    plugins:[{id:'l', afterDraw(c){ drawPieLabels(c, data.map((v,i)=>({i, v})), tot, labels, 0); }}]});
 }
 function delayKpiCardHTML(title, cls, k){
   return '<div class="delaykpi-card">'
@@ -1006,7 +1021,6 @@ function delayKpiCardHTML(title, cls, k){
     + '<div class="delaykpi-row"><span>中位延遲</span><b>'+k.median+' 分</b></div>'
     + '<div class="delaykpi-row"><span>&gt;2hr 佔比</span><b>'+k.gt2_pct+'%</b></div>'
     + '<div class="delaykpi-row"><span>&gt;2hr 架次</span><b>'+k.gt2_n+' 班</b></div>'
-    + '<div class="delaykpi-row"><span>已飛架次</span><b>'+k.flown_n+' 班</b></div>'
     + '</div>'
     + '<div class="delaykpi-group">'
     + '<div class="delaykpi-glabel">取消或改期　<span class="mono">母體 '+k.unres_pop+' 班</span></div>'
