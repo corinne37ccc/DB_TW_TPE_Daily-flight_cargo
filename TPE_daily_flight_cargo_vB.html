@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>桃園機場貨運航班儀表板</title>
+<title>桃園機場貨運每日班表儀表板</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
 <style>
 /* ============================================================
@@ -22,6 +22,8 @@
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* hidden 屬性須勝過 inline 的 display（否則 style="display:inline-flex" 會蓋掉 hidden）*/
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{
   font:18px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
@@ -41,7 +43,8 @@ header{
   background:rgba(255,255,255,.94); backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);
 }
-.hd{display:flex;align-items:baseline;gap:8px;padding:10px 14px 8px;flex-wrap:wrap}
+/* 標題與補充資訊改為上下兩行 */
+.hd{display:flex;flex-direction:column;gap:3px;padding:10px 14px 8px}
 .hd h1{font-size:20px;font-weight:700;letter-spacing:.01em}
 .hd .sub{font-size:15px;color:var(--ink3)}
 nav{display:flex;gap:2px;overflow-x:auto;padding:0 8px;scrollbar-width:none}
@@ -179,6 +182,11 @@ select{
 .hmkey i.k1{background:#dbeafe}
 .hmkey i.k2{background:#60a5fa}
 .hmkey i.k3{background:#1d4ed8}
+/* 降落熱力圖為橘色系，圖例 swatch 須同色，否則圖例對不上圖面 */
+.hmkey.arr i.k1{background:#fde9c8}
+.hmkey.arr i.k2{background:#f0a94a}
+.hmkey.arr i.k3{background:#b45309}
+.hmkey b{font-weight:650;color:var(--ink);margin-right:4px}
 
 /* ============================================================
    雜項
@@ -216,7 +224,7 @@ select{
 
 <header>
   <div class="hd">
-    <h1>桃園機場貨運航班儀表板</h1>
+    <h1>桃園機場貨運每日班表儀表板</h1>
     <span class="sub" id="freshness">載入中…</span>
   </div>
   <nav id="nav" role="tablist">
@@ -262,8 +270,10 @@ select{
 
     <div class="card">
       <div class="ctitle"><h2>每週分時架次熱力圖</h2></div>
-      <div class="ctrls"><div class="seg" id="t1c-kind"></div></div>
-      <div class="hmkey" id="t1c-key"></div>
+      <div class="ctrls">
+        <select id="t1c-week"></select>
+        <div class="seg" id="t1c-kind"></div>
+      </div>
       <div class="hmwrap" id="t1c-hm"></div>
     </div>
 
@@ -276,20 +286,22 @@ select{
 
   <!-- ========================= 班表數據分析 ========================= -->
   <section class="panel" id="t2">
-    <div class="card" style="padding-bottom:6px">
-      <div class="ctrls" style="margin:0 0 8px">
+    <!-- 子頁籤與其對應的控制項並排於同一列（貨機/客機屬「航班組成」，航空公司屬「貨機分析」）-->
+    <div class="card">
+      <div class="ctrls" style="margin:0">
         <div class="seg" id="t2-sub"></div>
+        <span id="t2-kind-wrap" style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">
+          <span style="font-size:16px;color:var(--ink2)">航班類型</span>
+          <div class="seg" id="t2-kind"></div>
+        </span>
+        <span id="t2-alsel-wrap" style="display:inline-flex;align-items:center;gap:8px;flex:1 1 200px;min-width:160px" hidden>
+          <span style="font-size:16px;color:var(--ink2);white-space:nowrap;flex:0 0 auto">航空公司</span>
+          <select id="t2-alsel" style="flex:1 1 auto;min-width:0"></select>
+        </span>
       </div>
     </div>
 
     <div id="t2-compose">
-      <div class="card">
-        <div class="ctrls" style="margin:0 0 8px">
-          <span style="font-size:16px;color:var(--ink2)">航班類型</span>
-          <div class="seg" id="t2-kind"></div>
-        </div>
-        <p class="chint" id="t2-pop"></p>
-      </div>
       <div class="card">
         <div class="ctitle"><h2>航空公司組成</h2></div>
         <p class="chint">圓餅圖佔比 ≥3% 獨立呈現，&lt;3% 併入「其他」。</p>
@@ -311,12 +323,6 @@ select{
     </div>
 
     <div id="t2-airline" hidden>
-      <div class="card">
-        <div class="ctrls" style="margin:0">
-          <span style="font-size:16px;color:var(--ink2)">航空公司</span>
-          <select id="t2-alsel"></select>
-        </div>
-      </div>
       <div class="card" id="t2-banner"></div>
       <div class="grid2">
         <div class="card" style="margin:0">
@@ -332,7 +338,6 @@ select{
       <div class="card">
         <div class="ctitle"><h3>週間分時起降熱力圖</h3></div>
         <div id="t2-hlnote"></div>
-        <div class="hmkey" id="t2-hmkey"></div>
         <div class="hmwrap" id="t2-hm"></div>
         <p class="cnote">班次少的航司格子多為空屬正常。</p>
       </div>
@@ -1018,13 +1023,20 @@ function heatmap(title, grid, heads, cls, hi, valid, levels){
   }
   return s + '</tbody></table>';
 }
-/** 圖例須寫明分級標準（客貨皆是），使用者才知道顏色各代表幾架 */
+/**
+ * 圖例須寫明分級標準（客貨皆是），使用者才知道顏色各代表幾架。
+ * variant＝'arr' 時 swatch 用橘色系，對應降落熱力圖；label 為前置粗體標題。
+ */
 const rng = (a, b) => a === b ? `${a} 架` : `${a}~${b} 架`;
-const hmKey = t => `
-  <span><i class="k0"></i>無航班（0 架）</span>
-  <span><i class="k1"></i>低（${rng(1, t[0])}）</span>
-  <span><i class="k2"></i>中（${rng(t[0]+1, t[1])}）</span>
-  <span><i class="k3"></i>高（${t[1]+1} 架以上）</span>`;
+function hmKey(t, variant, label){
+  return `<div class="hmkey${variant === 'arr' ? ' arr' : ''}">
+    ${label ? `<b>${esc(label)}</b>` : ''}
+    <span><i class="k0"></i>無航班（0 架）</span>
+    <span><i class="k1"></i>低（${rng(1, t[0])}）</span>
+    <span><i class="k2"></i>中（${rng(t[0]+1, t[1])}）</span>
+    <span><i class="k3"></i>高（${t[1]+1} 架以上）</span>
+  </div>`;
+}
 
 /* ================================================================
    共用篩選 / 控制項
@@ -1099,8 +1111,9 @@ function legend(host, items, scope){
 /* ================================================================
    頁籤 1 — 起降架次
    ================================================================ */
-// 1-1、1-2、1-3 各有自己的客貨切換（互不連動）；1-2 與 1-3 共用週次選單
-const S1 = { date:null, kind:'all', dir:'all', avg:false, week:null, kindB:'all', kind3:'cargo' };
+// 1-1、1-2、1-3 各有自己的客貨切換（互不連動）；1-2 與 1-3 各有獨立週次選單
+const S1 = { date:null, kind:'all', dir:'all', avg:false,
+             week:null, kindB:'all', weekC:null, kind3:'cargo' };
 
 function initT1(){
   // 日期選單：7/5 起 ～ 前一日（當日未定稿不列入）
@@ -1111,14 +1124,20 @@ function initT1(){
   ds.value = S1.date;
   ds.onchange = () => { S1.date = ds.value; drawT1a(); };
 
+  // 週次選單選項（1-2 與 1-3 各一份，內容相同但互不連動）
+  const weekOpts = DB.weeks.map(w =>
+    `<option value="${w.monday}">${w.week} 週（${md(w.monday)}–${md(addDays(w.monday,6))}）</option>`).join('');
+  const firstWeek = DB.weeks[0] ? DB.weeks[0].monday : null;
+
   const ws = $('#t1-week');
-  ws.innerHTML = DB.weeks.map(w => {
-    const sun = addDays(w.monday, 6);
-    return `<option value="${w.monday}">${w.week} 週（${md(w.monday)}–${md(sun)}）</option>`;
-  }).join('');
-  S1.week = DB.weeks[0] ? DB.weeks[0].monday : null;
-  ws.value = S1.week;
-  ws.onchange = () => { S1.week = ws.value; drawT1b(); drawT1c(); };
+  ws.innerHTML = weekOpts;
+  S1.week = firstWeek; ws.value = S1.week;
+  ws.onchange = () => { S1.week = ws.value; drawT1b(); };      // 只驅動 1-2
+
+  const wsc = $('#t1c-week');
+  wsc.innerHTML = weekOpts;
+  S1.weekC = firstWeek; wsc.value = S1.weekC;
+  wsc.onchange = () => { S1.weekC = wsc.value; drawT1c(); };   // 只驅動 1-3
 
   const KINDS = [{v:'all',label:'全部'},{v:'cargo',label:'貨運'},{v:'pax',label:'客運'}];
   const DIRS  = [{v:'all',label:'起+降'},{v:'DEP',label:'起飛'},{v:'ARR',label:'降落'}];
@@ -1194,8 +1213,8 @@ function drawT1b(){
 }
 
 function drawT1c(){
-  const cal  = Array.from({length:7}, (_,i) => addDays(S1.week, i));
-  const days = weekDays(S1.week);
+  const cal  = Array.from({length:7}, (_,i) => addDays(S1.weekC, i));   // 1-3 用獨立週次 weekC
+  const days = weekDays(S1.weekC);
   const rows = flown(DB.clean).filter(r => S1.kind3 === 'cargo' ? r.cargo : !r.cargo);
   const heads = cal.map(d => md(d) + (evOf(d) ? ' ⚠' : ''));
   const valid = days.map(d => !!d);                 // 非母體日整欄留白，不與「0 架」混淆
@@ -1209,10 +1228,11 @@ function drawT1c(){
   };
   const D = build('DEP'), R = build('ARR');
   const lv = levelsOf(cellVals(D, valid).concat(cellVals(R, valid)), S1.kind3);
-  $('#t1c-key').innerHTML = hmKey(lv);
+  const kl = KIND_LABEL[S1.kind3];
+  // 起飛（藍）、降落（橘）各自的圖例，色系與圖面一致
   $('#t1c-hm').innerHTML =
-    `<div>${heatmap(`起飛 · ${KIND_LABEL[S1.kind3]}`, D, heads, 'dep', null, valid, lv)}</div>` +
-    `<div>${heatmap(`降落 · ${KIND_LABEL[S1.kind3]}`, R, heads, 'arr', null, valid, lv)}</div>`;
+    `<div>${hmKey(lv, 'dep', `起飛 · ${kl}`)}${heatmap(`起飛 · ${kl}`, D, heads, 'dep', null, valid, lv)}</div>` +
+    `<div>${hmKey(lv, 'arr', `降落 · ${kl}`)}${heatmap(`降落 · ${kl}`, R, heads, 'arr', null, valid, lv)}</div>`;
 }
 
 function drawT1d(){
@@ -1288,6 +1308,9 @@ function initT2(){
         S2.sub = v; segSync($('#t2-sub'), v);
         $('#t2-compose').hidden = v !== 'compose';
         $('#t2-airline').hidden = v !== 'airline';
+        // 控制列隨模式切換：組成看貨機/客機，貨機分析看航空公司
+        $('#t2-kind-wrap').hidden  = v !== 'compose';
+        $('#t2-alsel-wrap').hidden = v !== 'airline';
         if (v === 'compose') drawT2a(); else drawT2b();
       });
   seg($('#t2-kind'), [{v:'cargo',label:'貨機'},{v:'pax',label:'客機'}], ()=>S2.kind,
@@ -1307,19 +1330,14 @@ function initT2(){
   sel.value = S2.airline;
   sel.onchange = () => { S2.airline = sel.value; S2.point = null; drawT2b(); };
 
+  // 初始狀態同步：預設為「航班組成」，故只顯示貨機/客機控制列，航空公司選單隱藏
+  $('#t2-kind-wrap').hidden  = S2.sub !== 'compose';
+  $('#t2-alsel-wrap').hidden = S2.sub !== 'airline';
   drawT2a();
 }
 
 function drawT2a(){
   const rows = flown(DB.clean).filter(r => S2.kind === 'cargo' ? r.cargo : !r.cargo);
-
-  // 母體資訊：統計天數與日期範圍
-  const evDays = DB.dates.filter(d => isExcl(d));
-  $('#t2-pop').innerHTML =
-    `母體：${KIND_LABEL[S2.kind]}實際起降（status = flown）累計 <b>${fmtInt(rows.length)}</b> 架次　·
-     統計 <b>${DB.dates.length}</b> 天（<b>${md(DB.dates[0])} – ${md(DB.dates[DB.dates.length-1])}</b>）　·
-     照實呈現，未排除特殊日${evDays.length ? `（含 ${evDays.map(md).join('、')} 等 ${evDays.length} 個特殊日）` : ''}。`;
-
   barPie('#t2-al-bar',  '#t2-al-pie',  tally(rows, r => r.airline, 0));
   barPie('#t2-ac-bar',  '#t2-ac-pie',  tally(rows, r => r.ac, 7));
   // 目的地看起飛的 ArrivalAirport；來源地看降落的 DepartureAirport；共用 CMAP → 同代碼同色
@@ -1388,10 +1406,9 @@ function drawT2hm(rows){
   const heads = Array.from({length:7}, () => '');
   // 分級同貨機固定門檻，使不同航司之間可直接對照
   const lv = CARGO_LEVELS;
-  $('#t2-hmkey').innerHTML = hmKey(lv);
   $('#t2-hm').innerHTML =
-    `<div>${heatmap('起飛', D.g, heads, 'dep', P ? D.hi : null, null, lv)}</div>` +
-    `<div>${heatmap('降落', R.g, heads, 'arr', P ? R.hi : null, null, lv)}</div>`;
+    `<div>${hmKey(lv, 'dep', '起飛')}${heatmap('起飛', D.g, heads, 'dep', P ? D.hi : null, null, lv)}</div>` +
+    `<div>${hmKey(lv, 'arr', '降落')}${heatmap('降落', R.g, heads, 'arr', P ? R.hi : null, null, lv)}</div>`;
   $('#t2-hlnote').innerHTML = P
     ? `<div class="banner info"><span>🔍</span><div>目前高亮：<b>${esc(labelOf(P))}</b>
        航線的航班時段（起飛＝飛往 ${esc(labelOf(P))}，降落＝來自 ${esc(labelOf(P))}），其餘時段淡化。
@@ -1441,8 +1458,7 @@ function drawT3(){
       rows: [
         ['中位延遲',      s => s.med == null ? '—' : s.med + ' 分'],
         ['&gt;2hr 佔比',  s => fmtPct(s.over2p)],
-        ['&gt;2hr 架次',  s => fmtInt(s.over2)],
-        ['已飛架次',      s => fmtInt(s.n)]
+        ['&gt;2hr 架次',  s => fmtInt(s.over2)]
       ] },
     { head: s => `取消或改期　<span style="font-weight:500;opacity:.75">母體 ${fmtInt(s.wBase)} 班</span>`,
       rows: [
@@ -1768,8 +1784,8 @@ async function boot(){
 
     const last = DB.dates[DB.dates.length-1];
     $('#freshness').innerHTML =
-      `歷史 ${md(DB.dates[0])}–${md(last)}（${DB.dates.length} 日）` +
-      (DB.snapshot ? `　·　預報快照 ${DB.snapshot.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}` : '');
+      `歷史資料 ${md(DB.dates[0])}–${md(last)}（${DB.dates.length} 日）` +
+      (DB.snapshot ? `，預報快照 ${DB.snapshot.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}` : '');
 
     // 5 資料缺口（CFG.gaps 為本檔內建文案，非外部資料，故允許內嵌標記）
     $('#t5-gaps').innerHTML = '<b>已知資料缺口</b><ul style="margin:6px 0 0 16px;line-height:1.75">' +
