@@ -4,5 +4,5 @@
 設計Ａ版：由Corinne's Claude 設計
 https://corinne37ccc.github.io/DB_TW_TPE_Daily-flight_cargo/TPE_daily_flight_cargo.html
 
-設計Ｂ版：用Yoyo's Claude 設計
+設計Ｂ版：用Fable設計，全新版面
 https://corinne37ccc.github.io/DB_TW_TPE_Daily-flight_cargo/TPE_daily_flight_cargo_vB.html
