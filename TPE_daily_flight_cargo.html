@@ -103,6 +103,12 @@ tr.statrow-click.sel td{background:var(--navy);color:#fff}
 .progress-fill{height:100%;background:var(--amber)}
 .progress-label{font-family:"IBM Plex Mono";font-size:12px;color:var(--muted);margin-top:6px}
 .badge2{font-family:"IBM Plex Mono";font-size:12px;color:var(--amber);border:1px solid var(--amber);border-radius:4px;padding:1px 7px;font-weight:600}
+.badge2.warn{color:var(--red);border-color:var(--red)}
+.badge2.muted{color:var(--muted);border-color:var(--line)}
+.d5grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 18px}
+.sl label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}
+.sl label b{color:var(--ink);font-family:"IBM Plex Mono";font-weight:600}
+.sl input{width:100%}
 .chart-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
 .banner3{display:flex;flex-wrap:wrap;gap:18px;align-items:baseline;padding:14px 16px;background:var(--navy);border-radius:8px;color:#fff}
 </style>
@@ -251,10 +257,74 @@ tr.statrow-click.sel td{background:var(--navy);color:#fff}
 </section>
 
 <section class="panel" id="p5">
-  <div class="card" style="background:none;border:none;padding:0">
-    <div class="empty-state">
-      <div class="tag2">待規劃</div>
-      <div class="msg"><b style="color:var(--ink)">衍生貨量推估</b>——由機型與架次推估貨運量的模組，待後續規劃。目前無實際貨量資料（機尾號、貨量欄位皆缺），此模組需另行設計推估方法後才會納入本儀表板。</div>
+  <p class="desc" style="max-width:none">由於未能取得每班機實際載貨量資料，運用桃園機場每日航班資料（機型＋架次）推估每日衍生貨量與衍生車流量，作為機場管理者與貨運相關業者的參考資訊，以利調整進場時間、減少道路壅塞。所有假設參數可在「假設設定」子頁籤調整。</p>
+  <div class="ctrls" style="margin-bottom:16px">
+    <div class="seg" id="p5sub"><button data-v="daily" class="on">每日推估</button><button data-v="monthly">每月尖峰摘要</button><button data-v="settings">假設設定</button></div>
+  </div>
+
+  <div id="p5-daily" class="subpanel active">
+    <div class="ctrls">
+      <select id="d5date"></select>
+      <span class="badge2" id="d5badge"></span>
+      <span class="chart-note" id="d5daycnt" style="margin:0"></span>
+    </div>
+    <div class="ctrls"><div class="seg" id="d5cat"><button data-v="frt" class="on">貨機</button><button data-v="pax">客機</button><button data-v="comb">全場合計</button></div></div>
+
+    <div id="d5-frt" class="d5view">
+      <div class="kpi-row">
+        <div class="kpi"><div class="l">當日貨機班次</div><div class="n" id="d5-frt-flights">–<span class="u"> 班</span></div></div>
+        <div class="kpi"><div class="l">推估衍生貨量總量（到站+離站）</div><div class="n" id="d5-frt-cargo">–<span class="u"> 噸</span></div></div>
+      </div>
+      <div class="card"><h2>航班貨量估計</h2><p class="desc">長條＝架次；線＝入倉（到站貨量）、出倉（離站貨量），與班次時間一致（噸/hr）。</p><div class="chart-wrap"><canvas id="d5f1"></canvas></div>
+        <div class="chart-note"><b>算法</b>：入倉＝該小時到站各航班的貨量（機型設計容量相加 × Load Factor），全數於到站時入倉；出倉＝該小時離站各航班的貨量，於離站時裝機出倉。純以班次時間呈現，未計貨車搬運時間。</div></div>
+      <div class="card"><h2>出入倉貨量估計</h2><p class="desc">出口進倉（領先離站）、進口出倉（落後到站）（噸/hr）。</p><div class="chart-wrap"><canvas id="d5f2"></canvas></div>
+        <div class="chart-note"><b>算法</b>（T＝貨車作業時間）：取上圖航班貨量中的進出口部分並套用搬運時間。出口進倉＝離站貨量 × 出口佔比，於起飛前 1～T 小時內平均送進，故尖峰早於離站。進口出倉＝到站貨量 × 進口佔比，於到站後 1～T 小時內平均提走，故尖峰晚於到站。佔比以外為轉口，留管制區、不衍生車流。</div></div>
+      <div class="card"><h2>進出口衍生貨車數量估計</h2><p class="desc">折線＝出口／進口車數；長條＝總計車數（台/hr）。</p><div class="chart-wrap"><canvas id="d5f3"></canvas></div>
+        <div class="chart-note"><b>算法</b>：貨車數＝進出口出入倉貨量 ÷ 每台車平均載貨量（見「假設設定」）。形狀與上圖相同，僅換算為車輛數。</div></div>
+    </div>
+    <div id="d5-pax" class="d5view" style="display:none">
+      <div class="kpi-row">
+        <div class="kpi"><div class="l">當日客機班次</div><div class="n" id="d5-pax-flights">–<span class="u"> 班</span></div></div>
+        <div class="kpi"><div class="l">推估腹艙衍生貨量總量（到站+離站）</div><div class="n" id="d5-pax-cargo">–<span class="u"> 噸</span></div></div>
+      </div>
+      <div class="card"><h2>航班貨量估計</h2><p class="desc">長條＝架次；線＝入倉（到站貨量）、出倉（離站貨量）（噸/hr）。</p><div class="chart-wrap"><canvas id="d5p1"></canvas></div>
+        <div class="chart-note"><b>算法</b>：入倉＝該小時到站各航班的腹艙貨量（各級架次 × 每級腹艙噸數，扣機下直轉），全數於到站時入倉；出倉＝該小時離站各航班的腹艙貨量，於離站時裝機出倉。純以班次時間呈現，未計貨車搬運時間。</div></div>
+      <div class="card"><h2>出入倉貨量估計</h2><p class="desc">出口進倉（領先離站）、進口出倉（落後到站）（噸/hr）。</p><div class="chart-wrap"><canvas id="d5p2"></canvas></div>
+        <div class="chart-note"><b>算法</b>（T＝貨車作業時間）：取上圖航班貨量中的進出口部分並套用搬運時間。出口進倉＝離站貨量 × 出口佔比，於起飛前 1～T 小時內平均送進，故尖峰早於離站。進口出倉＝到站貨量 × 進口佔比，於到站後 1～T 小時內平均提走，故尖峰晚於到站。佔比以外為轉口，留管制區、不衍生車流。</div></div>
+      <div class="card"><h2>進出口衍生貨車數量估計</h2><p class="desc">折線＝出口／進口車數；長條＝總計車數（台/hr）。</p><div class="chart-wrap"><canvas id="d5p3"></canvas></div>
+        <div class="chart-note"><b>算法</b>：貨車數＝進出口出入倉貨量 ÷ 每台車平均載貨量（見「假設設定」）。形狀與上圖相同，僅換算為車輛數。</div></div>
+    </div>
+    <div id="d5-comb" class="d5view" style="display:none">
+      <div class="kpi-row">
+        <div class="kpi"><div class="l">當日全場班次（貨機+客機）</div><div class="n" id="d5-comb-flights">–<span class="u"> 班</span></div></div>
+        <div class="kpi"><div class="l">推估全場衍生貨量總量</div><div class="n" id="d5-comb-cargo">–<span class="u"> 噸</span></div></div>
+        <div class="kpi"><div class="l">車流尖峰小時</div><div class="n" id="d5-peak-hour">–</div></div>
+        <div class="kpi"><div class="l">尖峰小時車輛數</div><div class="n" id="d5-peak-veh">–<span class="u"> 台</span></div></div>
+      </div>
+      <div class="card"><h2>航班貨量估計（含客貨運）</h2><p class="desc">入倉（到站貨量）、出倉（離站貨量），含貨機＋客機（噸/hr）。</p><div class="chart-wrap"><canvas id="d5c1"></canvas></div></div>
+      <div class="card"><h2>出入倉貨量估計</h2><p class="desc">出口進倉（領先離站）、進口出倉（落後到站），含客貨運（噸/hr）。</p><div class="chart-wrap"><canvas id="d5c2"></canvas></div></div>
+      <div class="card"><h2>進出口衍生貨車數量估計</h2><p class="desc">折線＝貨機／客機衍生車輛數；長條＝合計車輛總數（台/hr）。</p><div class="chart-wrap"><canvas id="d5c3"></canvas></div>
+        <div class="chart-note">貨車數＝進出口出入倉貨量 ÷ 每台車平均載貨量。形狀與上圖相同，僅單位換為台/hr。</div></div>
+    </div>
+  </div>
+
+  <div id="p5-monthly" class="subpanel">
+    <div class="ctrls"><select id="d5mon"></select><span class="chart-note" style="margin:0">尖峰以當日班次數為基準；平日／假日各取班次最多的一天。</span></div>
+    <div id="d5monBody"></div>
+  </div>
+
+  <div id="p5-settings" class="subpanel">
+    <div class="card"><div class="group"><div class="group-title">客貨機共通設定</div><div class="d5grid" id="d5-grp-common"></div></div></div>
+    <div class="card">
+      <div class="group"><div class="group-title">貨機設定</div><div class="d5grid" id="d5-grp-frt"></div></div>
+      <p class="desc" style="margin:12px 0 4px">貨機機型衍生貨量參考基準（設計容量固定值，×LF 為推估貨量）</p>
+      <div class="tblwrap"><table><thead><tr><th>機型</th><th>設計容量(噸/架)</th><th>機型</th><th>設計容量(噸/架)</th></tr></thead><tbody id="d5-frt-tbl"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="group"><div class="group-title">客機設定</div><div class="d5grid" id="d5-grp-pax"></div></div>
+      <p class="desc" style="margin:12px 0 4px">客機腹艙各級衍生貨量為可調假設；級別歸屬如下</p>
+      <div class="tblwrap"><table><thead><tr><th>級別</th><th>代表機型</th><th>目前設定(噸/班)</th></tr></thead><tbody id="d5-pax-tbl"></tbody></table></div>
+      <div class="chart-note" style="margin-top:10px">客機腹艙載貨無實測，各級噸數為假設。資料累積後可逐級以實際每日總量回推校正。</div>
     </div>
   </div>
 </section>
@@ -415,7 +485,9 @@ async function init(){
     document.getElementById('mainContent').style.display='block';
     renderHeaderStats();
     initNav();
-    initTab1(); initTab2(); initTab3(); initTab4();
+    initTab1(); initTab2(); initTab3(); initTab4(); initTab5();
+    routeFromHash();
+    window.addEventListener('hashchange', routeFromHash);
   }catch(err){
     console.error(err);
     document.getElementById('loadingOverlay').style.display='none';
@@ -530,14 +602,49 @@ function renderHeaderStats(){
   document.getElementById('hsPax').textContent = fmtNum(CLEAN.filter(r=>r.status==='flown'&&!r.isCargo).length);
 }
 
+/* ================= hash 路由（讓每個頁籤/子頁籤有獨立網址可分享） ================= */
+const TAB_SLUGS = {p4:'forecast', p1:'movements', p2:'schedule', p3:'delay', p5:'derived'};
+const SLUG_TO_TAB = Object.fromEntries(Object.entries(TAB_SLUGS).map(([k,v])=>[v,k]));
+const SUB_SLUGS = {comp:'composition', airline:'airline'};
+const SLUG_TO_SUB = Object.fromEntries(Object.entries(SUB_SLUGS).map(([k,v])=>[v,k]));
+let curP2Sub = 'comp', curP5Sub = 'daily';
+function updateHash(){
+  const tabId = (document.querySelector('.panel.active')||{}).id; if(!tabId) return;
+  let hash = '#'+(TAB_SLUGS[tabId]||tabId);
+  if(tabId==='p2') hash += '/'+(SUB_SLUGS[curP2Sub]||curP2Sub);
+  if(tabId==='p5') hash += '/'+curP5Sub;
+  if(location.hash!==hash) history.replaceState(null,'',hash);
+}
+function setTab(tabId){
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active', x.dataset.t===tabId));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id===tabId));
+}
+function setP2Sub(sub){
+  curP2Sub = sub;
+  document.querySelectorAll('#p2sub button').forEach(x=>x.classList.toggle('on', x.dataset.v===sub));
+  document.querySelectorAll('#p2 .subpanel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(sub==='comp'?'p2-comp':'p2-airline').classList.add('active');
+  document.getElementById('t2catsel').style.display = (sub==='comp') ? '' : 'none';
+}
+function setP5Sub(sub){
+  curP5Sub = sub;
+  document.querySelectorAll('#p5sub button').forEach(x=>x.classList.toggle('on', x.dataset.v===sub));
+  document.querySelectorAll('#p5 .subpanel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('p5-'+sub).classList.add('active');
+  if(sub==='monthly') d5_renderMonth();
+}
+function routeFromHash(){
+  const raw = (location.hash||'').replace(/^#/,'');
+  const parts = raw.split('/');
+  const tabId = SLUG_TO_TAB[parts[0]] || (document.getElementById(parts[0]) && parts[0]) || 'p4';
+  setTab(tabId);
+  if(tabId==='p2') setP2Sub((parts[1]&&SLUG_TO_SUB[parts[1]]) || (parts[1]&&document.getElementById('p2-'+parts[1])&&parts[1]) || 'comp');
+  if(tabId==='p5') setP5Sub((parts[1]&&document.getElementById('p5-'+parts[1])&&parts[1]) || 'daily');
+  updateHash();
+}
 function initNav(){
   document.querySelectorAll('#tabs button').forEach(b=>{
-    b.onclick=()=>{
-      document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      document.getElementById(b.dataset.t).classList.add('active');
-    };
+    b.onclick=()=>{ setTab(b.dataset.t); updateHash(); };
   });
 }
 
@@ -957,11 +1064,7 @@ function initTab2(){
   sel.onchange = ()=>drawT3(sel.value);
   if(cargoAirlines.length){ sel.value = cargoAirlines[0].k; drawT3(cargoAirlines[0].k); }
 
-  seg('p2sub', v=>{
-    document.querySelectorAll('#p2 .subpanel').forEach(p=>p.classList.remove('active'));
-    document.getElementById(v==='comp'?'p2-comp':'p2-airline').classList.add('active');
-    document.getElementById('t2catsel').style.display = (v==='comp') ? '' : 'none';
-  });
+  seg('p2sub', v=>{ setP2Sub(v); updateHash(); });
 }
 
 /* ================= TAB 3 貨機延遲分析 ================= */
@@ -1204,6 +1307,205 @@ function initTab4(){
   seg('catSel', v=>{ fcSel.cat=v; fcRedraw(); });
   seg('dirSel', v=>{ fcSel.dir=v; fcRedraw(); });
   fcRedraw();
+}
+
+/* ================= TAB 5 衍生貨量推估 ================= */
+// 資料直接沿用已載入的 CLEAN（不再另外抓 clean 分頁），特殊日直接沿用 EVENT_MAP。
+const d5_FCAP={'B747-8F':130,'B747-400':105,'B777F':95,'B777-200':75,'A330-300':58,'B767-300':50,'B757-200':35,'B737-800':21,'B737-400':18,'B737-300':17};
+function d5_fcap(t){ return d5_FCAP[t]!=null ? d5_FCAP[t] : 60; }
+function d5_clsOf(t){ t=String(t||'');
+  if(t.indexOf('A380')===0) return 'F';
+  if(t.indexOf('B777')===0||t.indexOf('B787')===0||t.indexOf('A350')===0||t==='B747-8I') return 'E';
+  if(t.indexOf('A330')===0||t.indexOf('A340')===0||t.indexOf('B767')===0) return 'D';
+  return 'C';
+}
+const d5_PAXCLS=[['C','A320 / A321 / B737','kC'],['D','A330 / B767','kD'],['E','B777 / B787 / A350 / B747','kE'],['F','A380','kF']];
+const d5_P={lf:0.75,mult:1,imp:0.7,exp:0.7,ramp:0.056,kC:2.5,kD:12,kE:18,kF:18,truckLag:3,truck:3};
+const d5_COMMON=[
+  ['mult','情境倍率（全場放大）',0.8,1.5,0.05,v=>v.toFixed(2)+'×'],
+  ['imp','航機抵達進口佔比',0.4,0.9,0.01,v=>Math.round(v*100)+'%'],
+  ['exp','航機起飛出口佔比',0.4,0.9,0.01,v=>Math.round(v*100)+'%'],
+  ['truckLag','貨車提貨/卸貨作業時間',1,6,1,v=>v+' hr'],
+  ['truck','每台車平均載貨量',1,10,0.5,v=>v+' 噸'],
+];
+const d5_FRTSET=[['lf','貨機 Load Factor',0.4,0.95,0.01,v=>Math.round(v*100)+'%']];
+const d5_PAXSET=[
+  ['ramp','客機機下直轉比例',0,0.2,0.001,v=>(v*100).toFixed(1)+'%'],
+  ['kC','C 窄體 每班噸數',0,8,0.5,v=>v+' 噸'],
+  ['kD','D 中寬體 每班噸數',4,25,1,v=>v+' 噸'],
+  ['kE','E 大寬體 每班噸數',8,30,1,v=>v+' 噸'],
+  ['kF','F 超大 每班噸數',8,30,1,v=>v+' 噸'],
+];
+function d5_mkSliders(host, items){
+  const el = document.getElementById(host);
+  items.forEach(([k,lab,mn,mx,st,fmt])=>{
+    const d=document.createElement('div'); d.className='sl';
+    d.innerHTML='<label>'+lab+'<b id="d5-lb-'+k+'">'+fmt(d5_P[k])+'</b></label><input type="range" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+d5_P[k]+'" id="d5-in-'+k+'">';
+    el.appendChild(d);
+    d.querySelector('input').addEventListener('input', e=>{
+      d5_P[k]=parseFloat(e.target.value);
+      document.getElementById('d5-lb-'+k).textContent=fmt(d5_P[k]);
+      if(k[0]==='k') d5_renderPaxTbl();
+      d5_refresh();
+    });
+  });
+}
+function d5_renderPaxTbl(){
+  document.getElementById('d5-pax-tbl').innerHTML = d5_PAXCLS.map(([c,ex,k])=>'<tr><td>'+c+'</td><td>'+ex+'</td><td class="mono">'+d5_P[k]+'</td></tr>').join('');
+}
+function d5_renderFrtTbl(){
+  const ks=Object.keys(d5_FCAP); let html='';
+  for(let i=0;i<ks.length;i+=2){ const a=ks[i], b=ks[i+1];
+    html+='<tr><td>'+a+'</td><td class="mono">'+d5_FCAP[a]+'</td>'+(b?('<td>'+b+'</td><td class="mono">'+d5_FCAP[b]+'</td>'):'<td></td><td></td>')+'</tr>'; }
+  document.getElementById('d5-frt-tbl').innerHTML = html;
+}
+
+let d5_CUR=null, d5_DAYCACHE={}, d5_cat='frt';
+function d5_dowSun(dateStr){ return new Date(dateStr+'T00:00:00').getDay(); }
+function d5_aggregateDay(date){
+  const z=()=>new Array(24).fill(0);
+  const rec={fCapArr:z(),fCapDep:z(),fCntArr:z(),fCntDep:z(),pC_A:z(),pD_A:z(),pE_A:z(),pF_A:z(),pC_D:z(),pD_D:z(),pE_D:z(),pF_D:z(),nFrt:0,nPax:0};
+  CLEAN.forEach(r=>{
+    if(r.actualDateStr!==date||r.status!=='flown'||r.actualHour==null) return;
+    const h=r.actualHour;
+    if(r.isCargo){
+      rec.nFrt++; const cp=d5_fcap(r.acType);
+      if(r.dir==='ARR'){ rec.fCapArr[h]+=cp; rec.fCntArr[h]++; } else { rec.fCapDep[h]+=cp; rec.fCntDep[h]++; }
+    } else {
+      rec.nPax++; const cl=d5_clsOf(r.acType), s=(r.dir==='ARR')?'A':'D';
+      rec['p'+cl+'_'+s][h]++;
+    }
+  });
+  return rec;
+}
+function d5_getDay(date){ if(!d5_DAYCACHE[date]) d5_DAYCACHE[date]=d5_aggregateDay(date); return d5_DAYCACHE[date]; }
+function d5_dayCount(date){ return CLEAN.reduce((s,r)=> s+((r.actualDateStr===date&&r.status==='flown')?1:0), 0); }
+
+function d5_derive(CA, CD){
+  const ed=new Array(24).fill(0), ip=new Array(24).fill(0), T=d5_P.truckLag;
+  for(let d=0;d<24;d++){ const w=CD[d]*d5_P.exp/T; for(let k=1;k<=T;k++) ed[(d-k+24)%24]+=w; }
+  for(let a=0;a<24;a++){ const w=CA[a]*d5_P.imp/T; for(let k=1;k<=T;k++) ip[(a+k)%24]+=w; }
+  return {ed, ip, vtot: ed.map((v,h)=>v+ip[h])};
+}
+function d5_computeDay(dt){
+  const y=d5_getDay(dt);
+  const fCA=y.fCapArr.map(c=>c*d5_P.lf*d5_P.mult), fCD=y.fCapDep.map(c=>c*d5_P.lf*d5_P.mult);
+  const bel=A=>hrs.map((_,h)=>(y['pC_'+A][h]*d5_P.kC+y['pD_'+A][h]*d5_P.kD+y['pE_'+A][h]*d5_P.kE+y['pF_'+A][h]*d5_P.kF)*d5_P.mult);
+  const gA=bel('A'), gD=bel('D');
+  const pCA=gA.map(v=>v*(1-d5_P.ramp)), pCD=gD.map(v=>v*(1-d5_P.ramp));
+  const f=d5_derive(fCA,fCD), p=d5_derive(pCA,pCD);
+  const S=a=>a.reduce((x,y2)=>x+y2,0);
+  const pArrCnt=hrs.map((_,h)=>y.pC_A[h]+y.pD_A[h]+y.pE_A[h]+y.pF_A[h]);
+  const pDepCnt=hrs.map((_,h)=>y.pC_D[h]+y.pD_D[h]+y.pE_D[h]+y.pF_D[h]);
+  return {f,p,fCA,fCD,pCA,pCD,fCntArr:y.fCntArr,fCntDep:y.fCntDep,pArrCnt,pDepCnt,nFrt:y.nFrt,nPax:y.nPax,fCargo:S(fCA)+S(fCD),pCargo:S(gA)+S(gD)};
+}
+
+const d5_R = n => n.map(x=>Math.round(x));
+function d5_bar(data,label,color,axis){ return {type:'bar',label,data,backgroundColor:color,yAxisID:axis||'y',order:2}; }
+function d5_line(data,label,color,axis,fill){ return {type:'line',label,data,borderColor:color,backgroundColor:color+'55',borderWidth:2,pointRadius:0,tension:.35,yAxisID:axis||'y',fill:fill||false,order:1}; }
+function d5_AR(data,label,color,fillTo){ return {type:'line',label,data,borderColor:color,backgroundColor:color+'99',borderWidth:1.5,pointRadius:0,tension:.35,fill:fillTo,order:1}; }
+const d5_dualAxis={y:{position:'left',title:{display:true,text:'架次'},grid:{color:'rgba(107,118,131,.12)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'噸/hr'}}};
+const d5_baseOpt = ex => ({responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{legend:{labels:{boxWidth:12,font:{size:12}}}}, scales:ex});
+function d5_mk(id, cfg){ kill(id); CH[id]=new Chart(document.getElementById(id), cfg); }
+// 貨機沿用 cargoDep/cargoArr（深藍/淺藍），客機沿用 paxDep/paxArr（深綠/淺綠），跟全站配色一致。
+const D5C = {fArr:C.cargoArr, fDep:C.cargoDep, pArr:C.paxArr, pDep:C.paxDep, exp:C.amber, imp:C.navy, vbar:GREY, frt:C.cargoDep, pax:C.paxDep};
+
+function d5_build(){
+  const d = d5_computeDay(d5_CUR); const V = d5_P.truck;
+  d5_mk('d5f1',{data:{labels:hrs,datasets:[d5_bar(d.fCntArr,'到站架次',D5C.fArr),d5_bar(d.fCntDep,'離站架次',D5C.fDep),d5_line(d5_R(d.fCA),'入倉（到站貨量）',D5C.imp,'y1'),d5_line(d5_R(d.fCD),'出倉（離站貨量）',D5C.exp,'y1')]},options:d5_baseOpt(d5_dualAxis)});
+  d5_mk('d5f2',{data:{labels:hrs,datasets:[d5_bar(d.fCntArr,'到站架次',D5C.fArr),d5_bar(d.fCntDep,'離站架次',D5C.fDep),d5_line(d5_R(d.f.ed),'出口進倉',D5C.exp,'y1'),d5_line(d5_R(d.f.ip),'進口出倉',D5C.imp,'y1')]},options:d5_baseOpt(d5_dualAxis)});
+  d5_mk('d5f3',{data:{labels:hrs,datasets:[d5_bar(d5_R(d.f.vtot.map(v=>v/V)),'總計車數',D5C.vbar),d5_line(d5_R(d.f.ed.map(v=>v/V)),'出口車數',D5C.exp),d5_line(d5_R(d.f.ip.map(v=>v/V)),'進口車數',D5C.imp)]},options:d5_baseOpt({y:{title:{display:true,text:'台/hr'},grid:{color:'rgba(107,118,131,.12)'}}})});
+  d5_mk('d5p1',{data:{labels:hrs,datasets:[d5_bar(d.pArrCnt,'到站架次',D5C.pArr),d5_bar(d.pDepCnt,'離站架次',D5C.pDep),d5_line(d5_R(d.pCA),'入倉（到站貨量）',D5C.imp,'y1'),d5_line(d5_R(d.pCD),'出倉（離站貨量）',D5C.exp,'y1')]},options:d5_baseOpt(d5_dualAxis)});
+  d5_mk('d5p2',{data:{labels:hrs,datasets:[d5_bar(d.pArrCnt,'到站架次',D5C.pArr),d5_bar(d.pDepCnt,'離站架次',D5C.pDep),d5_line(d5_R(d.p.ed),'出口進倉',D5C.exp,'y1'),d5_line(d5_R(d.p.ip),'進口出倉',D5C.imp,'y1')]},options:d5_baseOpt(d5_dualAxis)});
+  d5_mk('d5p3',{data:{labels:hrs,datasets:[d5_bar(d5_R(d.p.vtot.map(v=>v/V)),'總計車數',D5C.vbar),d5_line(d5_R(d.p.ed.map(v=>v/V)),'出口車數',D5C.exp),d5_line(d5_R(d.p.ip.map(v=>v/V)),'進口車數',D5C.imp)]},options:d5_baseOpt({y:{title:{display:true,text:'台/hr'},grid:{color:'rgba(107,118,131,.12)'}}})});
+  const tArr=hrs.map((_,h)=>d.fCntArr[h]+d.pArrCnt[h]), tDep=hrs.map((_,h)=>d.fCntDep[h]+d.pDepCnt[h]);
+  const tIn=hrs.map((_,h)=>d.fCA[h]+d.pCA[h]), tOut=hrs.map((_,h)=>d.fCD[h]+d.pCD[h]);
+  const tExp=hrs.map((_,h)=>d.f.ed[h]+d.p.ed[h]), tImp=hrs.map((_,h)=>d.f.ip[h]+d.p.ip[h]);
+  d5_mk('d5c1',{data:{labels:hrs,datasets:[d5_bar(tArr,'到站架次',D5C.fArr),d5_bar(tDep,'離站架次',D5C.fDep),d5_line(d5_R(tIn),'入倉（到站貨量）',D5C.imp,'y1'),d5_line(d5_R(tOut),'出倉（離站貨量）',D5C.exp,'y1')]},options:d5_baseOpt(d5_dualAxis)});
+  const fRoad=hrs.map((_,h)=>d.f.ed[h]+d.f.ip[h]), pRoad=hrs.map((_,h)=>d.p.ed[h]+d.p.ip[h]);
+  d5_mk('d5c2',{data:{labels:hrs,datasets:[d5_AR(d5_R(fRoad),'貨機進出口貨量',D5C.frt,'origin'),d5_AR(d5_R(pRoad),'客機進出口貨量',D5C.pax,'-1')]},options:d5_baseOpt({y:{stacked:true,title:{display:true,text:'噸/hr'},grid:{color:'rgba(107,118,131,.12)'}}})});
+  d5_mk('d5c3',{data:{labels:hrs,datasets:[d5_bar(d5_R(fRoad.map((v,h)=>(v+pRoad[h])/V)),'合計車輛總數',D5C.vbar),d5_line(d5_R(fRoad.map(v=>v/V)),'貨機衍生車輛數',D5C.frt),d5_line(d5_R(pRoad.map(v=>v/V)),'客機衍生車輛數',D5C.pax)]},options:d5_baseOpt({y:{title:{display:true,text:'台/hr'},grid:{color:'rgba(107,118,131,.12)'}}})});
+  const road=tExp.map((v,h)=>v+tImp[h]); const mi=road.indexOf(Math.max(...road));
+  document.getElementById('d5-peak-hour').textContent = hrs[mi]+':00';
+  document.getElementById('d5-peak-veh').textContent = Math.round(road[mi]/V).toLocaleString();
+  const nfmt = n => Math.round(n).toLocaleString();
+  document.getElementById('d5-frt-flights').innerHTML = d.nFrt+'<span class="u"> 班</span>';
+  document.getElementById('d5-frt-cargo').innerHTML = nfmt(d.fCargo)+'<span class="u"> 噸</span>';
+  document.getElementById('d5-pax-flights').innerHTML = d.nPax+'<span class="u"> 班</span>';
+  document.getElementById('d5-pax-cargo').innerHTML = nfmt(d.pCargo)+'<span class="u"> 噸</span>';
+  document.getElementById('d5-comb-flights').innerHTML = (d.nFrt+d.nPax)+'<span class="u"> 班</span>';
+  document.getElementById('d5-comb-cargo').innerHTML = nfmt(d.fCargo+d.pCargo)+'<span class="u"> 噸</span>';
+}
+function d5_refresh(){ d5_build(); if(document.querySelector('#p5sub button[data-v="monthly"]').classList.contains('on')) d5_renderMonth(); }
+
+function d5_peakOf(days, weekend){
+  const pool = days.filter(d=>{ const w=d5_dowSun(d); return weekend ? (w===0||w===6) : (w>=1&&w<=5); });
+  return pool.length ? pool.reduce((a,b)=> d5_dayCount(b)>d5_dayCount(a) ? b : a) : null;
+}
+function d5_drawFeatured(date, pfx){
+  if(!date) return;
+  const d = d5_computeDay(date); const V = d5_P.truck;
+  const tArr=hrs.map((_,h)=>d.fCntArr[h]+d.pArrCnt[h]), tDep=hrs.map((_,h)=>d.fCntDep[h]+d.pDepCnt[h]);
+  const tIn=hrs.map((_,h)=>d.fCA[h]+d.pCA[h]), tOut=hrs.map((_,h)=>d.fCD[h]+d.pCD[h]);
+  const fRoad=hrs.map((_,h)=>d.f.ed[h]+d.f.ip[h]), pRoad=hrs.map((_,h)=>d.p.ed[h]+d.p.ip[h]);
+  d5_mk(pfx+'-flt',{data:{labels:hrs,datasets:[d5_bar(tArr,'到站架次',D5C.fArr),d5_bar(tDep,'離站架次',D5C.fDep),d5_line(d5_R(tIn),'入倉（到站貨量）',D5C.imp,'y1'),d5_line(d5_R(tOut),'出倉（離站貨量）',D5C.exp,'y1')]},options:d5_baseOpt(d5_dualAxis)});
+  d5_mk(pfx+'-io',{data:{labels:hrs,datasets:[d5_bar(d5_R(fRoad.map((v,h)=>(v+pRoad[h])/V)),'合計車輛總數',D5C.vbar),d5_line(d5_R(fRoad.map(v=>v/V)),'貨機衍生車輛數',D5C.frt),d5_line(d5_R(pRoad.map(v=>v/V)),'客機衍生車輛數',D5C.pax)]},options:d5_baseOpt({y:{title:{display:true,text:'台/hr'},grid:{color:'rgba(107,118,131,.12)'}}})});
+}
+function d5_renderMonth(){
+  const mo = document.getElementById('d5mon').value;
+  const days = availableDates().filter(d=>d.startsWith(mo));
+  const wd = d5_peakOf(days,false), we = d5_peakOf(days,true);
+  const cargoOf = dt => { const d=d5_computeDay(dt); return Math.round(d.fCargo+d.pCargo).toLocaleString(); };
+  const block = (title, dt, pfx) => dt ? (
+    '<div class="mon-feat"><div class="mon-feat-h"><span class="mon-title">'+title+'</span><span class="badge2">'+dt+'（週'+WD(dt)+'）</span></div>'
+    +'<div class="kpi-row"><div class="kpi"><div class="l">當日班次數（尖峰基準）</div><div class="n">'+d5_dayCount(dt)+'<span class="u"> 班</span></div></div>'
+    +'<div class="kpi"><div class="l">衍生貨量總量</div><div class="n">'+cargoOf(dt)+'<span class="u"> 噸</span></div></div></div>'
+    +'<div class="card"><h2>航班貨量估計</h2><div class="chart-wrap"><canvas id="'+pfx+'-flt"></canvas></div></div>'
+    +'<div class="card"><h2>衍生貨車數量估計</h2><p class="desc">折線＝貨機／客機衍生車輛數；長條＝合計車輛總數（台/hr）。</p><div class="chart-wrap"><canvas id="'+pfx+'-io"></canvas></div></div></div>'
+  ) : ('<div class="mon-feat"><div class="mon-feat-h"><span class="mon-title">'+title+'</span></div><div class="card"><p class="desc" style="margin:0">當月無此類日期資料</p></div></div>');
+  document.getElementById('d5monBody').innerHTML = block('平日尖峰日', wd, 'mwd') + block('假日尖峰日', we, 'mwe');
+  ['mwd-flt','mwd-io','mwe-flt','mwe-io'].forEach(id=>kill(id));
+  d5_drawFeatured(wd,'mwd'); d5_drawFeatured(we,'mwe');
+}
+
+function d5_updateBadge(){
+  const ev = EVENT_MAP.get(d5_CUR);
+  const b = document.getElementById('d5badge');
+  if(!ev){ b.textContent='正常日'; b.className='badge2 muted'; }
+  else { b.textContent=ev.category; b.className='badge2'+(ev.excludeAll?' warn':''); }
+  const y = d5_getDay(d5_CUR);
+  document.getElementById('d5daycnt').textContent = '貨機 '+y.nFrt+' 班 · 客機 '+y.nPax+' 班';
+}
+function d5_setCat(cat){
+  d5_cat = cat;
+  document.querySelectorAll('#d5cat button').forEach(x=>x.classList.toggle('on', x.dataset.v===cat));
+  ['frt','pax','comb'].forEach(c=>{ document.getElementById('d5-'+c).style.display = (c===cat) ? '' : 'none'; });
+}
+function initTab5(){
+  const dates = availableDates();
+  const dsel = document.getElementById('d5date');
+  dsel.innerHTML = dates.map(d=>'<option value="'+d+'">'+d+'（週'+WD(d)+'）'+(EVENT_MAP.has(d)?' ⚠':'')+'</option>').join('');
+  d5_CUR = [...dates].reverse().find(d=>!EVENT_MAP.has(d)) || dates[dates.length-1];
+  dsel.value = d5_CUR;
+  dsel.onchange = ()=>{ d5_CUR=dsel.value; d5_updateBadge(); d5_build(); };
+  seg('d5cat', v=>d5_setCat(v));
+  d5_setCat('frt');
+  d5_updateBadge();
+  d5_build();
+
+  const months = [...new Set(dates.map(d=>d.slice(0,7)))].sort();
+  const msel = document.getElementById('d5mon');
+  msel.innerHTML = months.map(m=>'<option value="'+m+'">'+m.slice(0,4)+'年'+m.slice(5,7)+'月</option>').join('');
+  if(months.length) msel.value = months[months.length-1];
+  msel.onchange = d5_renderMonth;
+
+  d5_mkSliders('d5-grp-common', d5_COMMON);
+  d5_mkSliders('d5-grp-frt', d5_FRTSET);
+  d5_mkSliders('d5-grp-pax', d5_PAXSET);
+  d5_renderFrtTbl();
+  d5_renderPaxTbl();
+
+  seg('p5sub', v=>{ setP5Sub(v); updateHash(); });
 }
 
 init();
