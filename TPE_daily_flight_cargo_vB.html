@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>桃園機場貨運每日班表儀表板</title>
+<title>桃園機場每日貨運航班儀表板</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
 <style>
 /* ============================================================
@@ -43,17 +43,41 @@ header{
   background:rgba(255,255,255,.94); backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);
 }
-/* 標題與補充資訊改為上下兩行 */
+/* 資料涵蓋範圍已移至頁尾，頁首只留標題 */
 .hd{display:flex;flex-direction:column;gap:3px;padding:10px 14px 8px}
-.hd h1{font-size:20px;font-weight:700;letter-spacing:.01em}
-.hd .sub{font-size:15px;color:var(--ink3)}
-nav{display:flex;gap:2px;overflow-x:auto;padding:0 8px;scrollbar-width:none}
+.hd h1{font-size:30px;font-weight:700;letter-spacing:.01em;line-height:1.25}
+@media(max-width:560px){.hd h1{font-size:24px}}
+/* 目錄鈕 + 可橫向捲動的頁籤列。手機上頁籤會被截斷，單看列尾不知道還有幾頁，
+   故另備一個「目錄」把所有頁籤一次列出。 */
+.navrow{display:flex;align-items:stretch;gap:6px;padding:0 8px}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0}
 nav::-webkit-scrollbar{display:none}
 nav button{
   flex:0 0 auto; padding:9px 12px; font-size:17px; color:var(--ink2);
   border-bottom:2px solid transparent; white-space:nowrap; font-weight:500;
 }
 nav button[aria-selected="true"]{color:var(--dep);border-bottom-color:var(--dep);font-weight:650}
+.menubtn{
+  flex:0 0 auto; align-self:center; padding:7px 12px; font-size:16px; font-weight:600;
+  color:var(--ink2); border:1px solid var(--line); border-radius:8px; background:#fafbfc;
+  white-space:nowrap;
+}
+.menubtn[aria-expanded="true"]{background:var(--dep);color:#fff;border-color:var(--dep)}
+.menu{
+  position:absolute; z-index:60; top:100%; left:8px; width:min(300px,calc(100% - 16px));
+  margin-top:4px; background:var(--card); border:1px solid var(--line); border-radius:10px;
+  box-shadow:0 10px 28px rgba(15,23,42,.16); overflow:hidden;
+}
+.menu button{
+  display:block; width:100%; text-align:left; padding:13px 15px; font-size:17px;
+  color:var(--ink); border-bottom:1px solid var(--line2);
+}
+.menu button:last-child{border-bottom:none}
+.menu button[aria-current="true"]{background:#eef4ff;color:var(--dep);font-weight:650}
+/* 展開時蓋住頁面，點選單以外的地方即可收合。
+   z-index 必須低於 header（50）—— header 是 sticky + z-index 的堆疊脈絡，
+   選單雖標 60 也只在該脈絡「內部」生效；遮罩若給 55 會整片蓋在選單上，變成點不到。 */
+.menu-scrim{position:fixed;inset:0;z-index:40}
 
 /* ============================================================
    版面
@@ -116,6 +140,7 @@ select{
 
 /* 3-1 雙欄對照 */
 .dual{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dual.one{grid-template-columns:1fr}
 .dual .col{border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .dual .ch{padding:8px 11px;font-size:15px;font-weight:650;border-bottom:1px solid var(--line)}
 .dual .col.norm .ch{background:#eef4ff;color:#1e40af}
@@ -172,8 +197,6 @@ select{
 .hm.arr td.d1{background:#fde9c8}
 .hm.arr td.d2{background:#f0a94a;color:#fff}
 .hm.arr td.d3{background:#b45309;color:#fff}
-.hm td.dim{opacity:.22}
-.hm td.hl{outline:2px solid #111;outline-offset:-2px;font-weight:700}
 /* 熱力圖圖例置於圖的上方 */
 .hmkey{display:flex;gap:12px;align-items:center;font-size:15px;color:var(--ink2);margin:0 0 8px;flex-wrap:wrap}
 .hmkey span{display:inline-flex;align-items:center;gap:5px}
@@ -187,6 +210,29 @@ select{
 .hmkey.arr i.k2{background:#f0a94a}
 .hmkey.arr i.k3{background:#b45309}
 .hmkey b{font-weight:650;color:var(--ink);margin-right:4px}
+
+/* ============================================================
+   頁籤 5
+   ============================================================ */
+/* 全場檢視 6 張統計卡固定 3 欄 → 剛好排成兩列 */
+.kpis.k3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:560px){.kpis.k3{grid-template-columns:repeat(2,1fr)}}
+/* 貨機／客機檢視只有 2 張卡：auto-fit 會把它們拉成半個版面寬，過於空曠，故限寬 */
+.kpis.k2{grid-template-columns:repeat(2,1fr);max-width:520px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px 20px}
+.sl label{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  font-size:15px;color:var(--ink2);margin-bottom:5px;line-height:1.35}
+.sl label b{color:var(--ink);font-weight:670;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.sl input[type=range]{width:100%;accent-color:var(--dep);margin:0}
+.gtitle{font-size:16px;font-weight:650;border-left:3px solid var(--cargo);
+  padding-left:9px;margin-bottom:11px;line-height:1.3}
+.gtitle.px{border-left-color:var(--pax)}
+.gtitle.cm{border-left-color:var(--ink2)}
+/* 每月尖峰摘要：每個特選日自成一段 */
+.mfeat{margin-bottom:20px}
+.mfeat:last-child{margin-bottom:0}
+.mhead{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+.mhead h3{font-size:17px}
 
 /* ============================================================
    雜項
@@ -224,16 +270,20 @@ select{
 
 <header>
   <div class="hd">
-    <h1>桃園機場貨運每日班表儀表板</h1>
-    <span class="sub" id="freshness">載入中…</span>
+    <h1>桃園機場每日貨運航班儀表板</h1>
   </div>
-  <nav id="nav" role="tablist">
-    <button role="tab" data-tab="t4" aria-selected="true">每日航班預報</button>
-    <button role="tab" data-tab="t1" aria-selected="false">起降架次統計</button>
-    <button role="tab" data-tab="t2" aria-selected="false">班表數據分析</button>
-    <button role="tab" data-tab="t3" aria-selected="false">貨機延遲分析</button>
-    <button role="tab" data-tab="t5" aria-selected="false">衍生貨量推估</button>
-  </nav>
+  <div class="navrow">
+    <button class="menubtn" id="menubtn" aria-expanded="false" aria-controls="menu">☰ 目錄</button>
+    <nav id="nav" role="tablist">
+      <button role="tab" data-tab="t4" aria-selected="true">每日航班預報</button>
+      <button role="tab" data-tab="t1" aria-selected="false">起降架次統計</button>
+      <button role="tab" data-tab="t2" aria-selected="false">航班組成分析</button>
+      <button role="tab" data-tab="t6" aria-selected="false">航空公司貨機分析</button>
+      <button role="tab" data-tab="t3" aria-selected="false">貨機延遲分析</button>
+      <button role="tab" data-tab="t5" aria-selected="false">貨量與車流推估</button>
+    </nav>
+  </div>
+  <div class="menu" id="menu" hidden></div>
 </header>
 
 <div id="boot" class="spin">正在讀取 Google Sheet…</div>
@@ -278,96 +328,100 @@ select{
     </div>
 
     <div class="card">
-      <div class="ctitle"><h2>平均架次</h2><span class="tag">趨勢待穩定</span></div>
-      <p class="chint">週一至五平均分時、平均每日架次（排除特殊日）。</p>
+      <div class="ctitle"><h2>平均架次</h2></div>
+      <p class="chint">該月週一至五的平均每日架次與平均尖峰時段（排除特殊日）。</p>
+      <div class="ctrls">
+        <select id="t1d-month"></select>
+      </div>
       <div id="t1d-body"></div>
     </div>
   </section>
 
-  <!-- ========================= 班表數據分析 ========================= -->
+  <!-- ========================= 航班組成分析 ========================= -->
   <section class="panel" id="t2">
-    <!-- 子頁籤與其對應的控制項並排於同一列（貨機/客機屬「航班組成」，航空公司屬「貨機分析」）-->
     <div class="card">
-      <div class="ctrls" style="margin:0">
-        <div class="seg" id="t2-sub"></div>
-        <span id="t2-kind-wrap" style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">
-          <span style="font-size:16px;color:var(--ink2)">航班類型</span>
-          <div class="seg" id="t2-kind"></div>
-        </span>
-        <span id="t2-alsel-wrap" style="display:inline-flex;align-items:center;gap:8px;flex:1 1 200px;min-width:160px" hidden>
-          <span style="font-size:16px;color:var(--ink2);white-space:nowrap;flex:0 0 auto">航空公司</span>
-          <select id="t2-alsel" style="flex:1 1 auto;min-width:0"></select>
-        </span>
+      <div class="ctitle"><h2>航班組成分析</h2></div>
+      <p class="chint">圓餅圖佔比 ≥3% 獨立呈現，&lt;3% 併入「其他」。
+        同一機場代碼在「目的地」與「來源地」兩圖使用相同顏色，便於對照進出口差異。</p>
+      <div class="ctrls" style="margin:10px 0 0">
+        <span style="font-size:16px;color:var(--ink2)">航班類型</span>
+        <div class="seg" id="t2-kind"></div>
       </div>
     </div>
 
-    <div id="t2-compose">
-      <div class="card">
-        <div class="ctitle"><h2>航空公司組成</h2></div>
-        <p class="chint">圓餅圖佔比 ≥3% 獨立呈現，&lt;3% 併入「其他」。</p>
-        <div class="grid2"><div id="t2-al-bar"></div><div id="t2-al-pie"></div></div>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h3>航空公司組成</h3></div>
+        <div id="t2-al-pie"></div>
       </div>
-      <div class="card">
-        <div class="ctitle"><h2>機型組成</h2></div>
-        <div class="grid2"><div id="t2-ac-bar"></div><div id="t2-ac-pie"></div></div>
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h3>機型組成</h3></div>
+        <div id="t2-ac-pie"></div>
       </div>
-      <div class="card">
-        <div class="ctitle"><h2>目的地分佈</h2><span class="tag">起飛 · ArrivalAirport</span></div>
-        <p class="chint">同一機場代碼在「目的地」與「來源地」兩圖使用相同顏色，便於對照進出口差異。</p>
-        <div class="grid2"><div id="t2-dst-bar"></div><div id="t2-dst-pie"></div></div>
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h3>目的地分佈</h3><span class="tag">起飛 · ArrivalAirport</span></div>
+        <div id="t2-dst-pie"></div>
       </div>
-      <div class="card">
-        <div class="ctitle"><h2>來源地分佈</h2><span class="tag">降落 · DepartureAirport</span></div>
-        <div class="grid2"><div id="t2-src-bar"></div><div id="t2-src-pie"></div></div>
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h3>來源地分佈</h3><span class="tag">降落 · DepartureAirport</span></div>
+        <div id="t2-src-pie"></div>
+      </div>
+    </div>
+    <p class="foot" id="t2-basis" style="text-align:left;padding:12px 2px 14px"></p>
+  </section>
+
+  <!-- ========================= 航空公司貨機分析 ========================= -->
+  <section class="panel" id="t6">
+    <div class="card">
+      <div class="ctitle"><h2>航空公司貨機分析</h2><span class="tag">僅貨機</span></div>
+      <div class="ctrls" style="margin:10px 0 0">
+        <span style="font-size:16px;color:var(--ink2);white-space:nowrap">航空公司</span>
+        <select id="t6-alsel" style="flex:1 1 240px;min-width:160px"></select>
       </div>
     </div>
 
-    <div id="t2-airline" hidden>
-      <div class="card" id="t2-banner"></div>
-      <div class="grid2">
-        <div class="card" style="margin:0">
-          <div class="ctitle"><h3>主要機型</h3></div>
-          <div id="t2-actbl"></div>
-        </div>
-        <div class="card" style="margin:0">
-          <div class="ctitle"><h3>主要航點</h3></div>
-          <p class="chint">點選航點 → 下方熱力圖高亮該航線時段；再點取消。</p>
-          <div id="t2-pttbl"></div>
-        </div>
+    <div class="card" id="t6-banner"></div>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h3>主要機型</h3></div>
+        <p class="chint">該司貨機各機型的執飛架次佔比。</p>
+        <div id="t6-acpie"></div>
       </div>
-      <div class="card">
-        <div class="ctitle"><h3>週間分時起降熱力圖</h3></div>
-        <div id="t2-hlnote"></div>
-        <div class="hmwrap" id="t2-hm"></div>
-        <p class="cnote">班次少的航司格子多為空屬正常。</p>
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h3>主要航點</h3></div>
+        <p class="chint">起飛以目的地計、降落以來源地計。</p>
+        <div id="t6-ptbar"></div>
       </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="ctitle"><h3>週間分時起降熱力圖</h3></div>
+      <div class="ctrls">
+        <select id="t6-week"></select>
+        <select id="t6-point"></select>
+      </div>
+      <div class="hmwrap" id="t6-hm"></div>
+      <p class="cnote" id="t6-hmnote"></p>
     </div>
   </section>
 
   <!-- ========================= 貨機延遲分析 ========================= -->
   <section class="panel" id="t3">
-    <div class="card">
-      <div class="ctitle"><h2>關鍵延遲與變動指標</h2></div>
-      <div class="dual" id="t3-dual"></div>
-      <p class="cnote" id="t3-base"></p>
-    </div>
     <div class="grid2">
-      <div class="card">
-        <div class="ctitle"><h2>常態延遲分佈</h2><span class="tag">排除特殊日</span></div>
-        <p class="chint">母體 = flown，六互斥分箱，加總 100%。</p>
-        <div id="t3-pie-a"></div>
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h2>關鍵延遲與變動指標</h2><span class="tag">排除特殊日</span></div>
+        <div class="dual one" id="t3-dual"></div>
+        <p class="cnote" id="t3-base"></p>
       </div>
-      <div class="card">
-        <div class="ctitle"><h2>真實狀況分佈</h2><span class="tag">含特殊日</span></div>
-        <p class="chint">母體 = flown + unresolved，六分箱外多一塊「取消或改期」。</p>
-        <p class="chint" id="t3-pie-b-note"></p>
-        <div id="t3-pie-b"></div>
+      <div class="card" style="margin:0">
+        <div class="ctitle"><h2>延遲與取消航班數量分布狀況</h2><span class="tag">排除特殊日</span></div>
+        <div id="t3-pie"></div>
+        <p class="cnote" id="t3-pie-note"></p>
       </div>
     </div>
-    <div class="card">
+    <div class="card" style="margin-top:12px">
       <div class="ctitle"><h2>各航空公司延遲狀況</h2><span class="tag">排除特殊日</span></div>
-      <p class="chint">所有貨運航空公司，依架次排序。分箱欄以<b>佔比</b>為主、架次為輔。</p>
       <div id="t3-tbl"></div>
+      <p class="cnote" id="t3-tbl-note"></p>
     </div>
   </section>
 
@@ -382,13 +436,6 @@ select{
     </div>
     <div id="t4-stale"></div>
     <div class="card">
-      <div class="ctitle"><h2>昨日回顧</h2><span class="tag" id="t4a-date"></span></div>
-      <div class="kpis" id="t4a-kpi"></div>
-      <p class="cnote" id="t4a-gap" style="margin:8px 0 12px"></p>
-      <div class="legend" id="t4a-legend"></div>
-      <div class="chart" id="t4a-chart"></div>
-    </div>
-    <div class="card">
       <div class="ctitle"><h2>今日班表</h2><span class="tag" id="t4b-date"></span></div>
       <div class="kpis" id="t4b-kpi" style="margin-bottom:12px"></div>
       <div class="legend" id="t4b-legend"></div>
@@ -396,24 +443,132 @@ select{
       <p class="cnote">折線＝上週同星期實際分時（照實含事件日）。</p>
     </div>
     <div class="card">
+      <div class="ctitle"><h2>昨日班表回顧</h2><span class="tag" id="t4a-date"></span></div>
+      <div class="kpis" id="t4a-kpi" style="margin-bottom:12px"></div>
+      <div class="legend" id="t4a-legend"></div>
+      <div class="chart" id="t4a-chart"></div>
+      <p class="cnote">長條＝表定班表（含取消或改期），以表定時刻分桶；折線＝實際起降，以實際起降時刻分桶。</p>
+    </div>
+    <div class="card">
       <div class="ctitle"><h2>明日班表</h2><span class="tag" id="t4c-date"></span></div>
       <div class="kpis" id="t4c-kpi" style="margin-bottom:12px"></div>
       <div class="legend" id="t4c-legend"></div>
       <div class="chart" id="t4c-chart"></div>
-      <p class="cnote"><b>明日機型多未定，架次為預估。</b>折線＝上週同星期實際分時。</p>
+      <p class="cnote">折線＝上週同星期實際分時。</p>
     </div>
   </section>
 
-  <!-- ========================= 頁籤 5 ========================= -->
+  <!-- ========================= 衍生貨量推估 ========================= -->
   <section class="panel" id="t5">
     <div class="card">
-      <div class="ctitle"><h2>5　衍生貨量推估</h2><span class="tag">待規劃</span></div>
-      <p class="chint" style="margin-bottom:12px">此頁待規劃。以下為已知資料缺口，屬本儀表板無法解決、需由上游資料或推計模組處理者。</p>
-      <div class="banner info"><span>ℹ️</span><div id="t5-gaps"></div></div>
+      <div class="ctitle"><h2>貨量與車流推估</h2><span class="tag">全頁為推估值</span></div>
+      <p class="chint">未能取得每班機實際載貨量，故以航班資料推估每日衍生貨量與貨運車流，
+        供機場管理者與貨運業者調整進場時間、減少道路壅塞之參考。
+        所有係數皆為假設，可於「假設設定」調整，圖表即時重算。</p>
+      <div class="ctrls" style="margin:10px 0 0"><div class="seg" id="t5-sub"></div></div>
+    </div>
+
+    <!-- ---------------- 每日推估 ---------------- -->
+    <div id="t5-day">
+      <div class="card">
+        <div class="ctrls" style="margin:0 0 11px">
+          <select id="t5-date"></select>
+          <div class="seg" id="t5-kind"></div>
+        </div>
+        <div id="t5-evt"></div>
+        <div class="kpis" id="t5-kpi"></div>
+      </div>
+
+      <!-- 說明一律置於圖下方：先看圖，需要時再往下讀算法與限制 -->
+      <div class="card">
+        <div class="ctitle"><h2>航班貨量</h2><span class="tag" id="t5a-tag"></span></div>
+        <div class="legend" id="t5a-legend"></div>
+        <div class="chart" id="t5a-chart"></div>
+        <p class="cnote" id="t5a-hint"></p>
+        <p class="cnote" id="t5a-note"></p>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h2>出入倉貨量</h2><span class="tag" id="t5b-tag"></span></div>
+        <div class="legend" id="t5b-legend"></div>
+        <div class="chart" id="t5b-chart"></div>
+        <p class="cnote" id="t5b-hint"></p>
+        <p class="cnote" id="t5b-note"></p>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h2>進出口衍生貨車數</h2><span class="tag" id="t5c-tag"></span></div>
+        <div class="legend" id="t5c-legend"></div>
+        <div class="chart" id="t5c-chart"></div>
+        <p class="cnote" id="t5c-hint"></p>
+        <p class="cnote" id="t5c-note"></p>
+      </div>
+    </div>
+
+    <!-- ---------------- 每月尖峰摘要 ---------------- -->
+    <div id="t5-mon" hidden>
+      <div class="card">
+        <div class="ctrls" style="margin:0">
+          <select id="t5-month"></select>
+          <div class="seg" id="t5m-kind"></div>
+        </div>
+        <p class="cnote">各月取當月<b>實際起降架次最多</b>的平日與假日各一天。
+          已排除事件表標記為「排除於常態統計」的日期 —— 那些日子的低架次來自中斷，不代表尖峰。</p>
+      </div>
+      <div id="t5-mon-body"></div>
+    </div>
+
+    <!-- ---------------- 假設設定 ---------------- -->
+    <div id="t5-cfg" hidden>
+      <div class="card">
+        <div class="ctitle"><h2>假設設定</h2><span class="tag">即時重算</span></div>
+        <p class="chint">調整後全頁圖表立即重算。重新整理即回到預設值。</p>
+        <div class="gtitle cm" style="margin-top:13px">客貨機共通</div>
+        <div class="sgrid" id="t5-p-common"></div>
+        <div class="gtitle" style="margin-top:18px">Load Factor</div>
+        <div class="sgrid" id="t5-p-lf"></div>
+        <div class="gtitle px" style="margin-top:18px">客機腹艙</div>
+        <div class="sgrid" id="t5-p-pax"></div>
+        <div class="ctrls" style="margin:16px 0 0">
+          <button class="chip" id="t5-reset">回復預設值</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h3>貨機機型設計容量</h3></div>
+        <p class="chint">固定值，乘 Load Factor 後為推估貨量。</p>
+        <div id="t5-frt-tbl"></div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h3>客機腹艙級別</h3></div>
+        <p class="chint">每班噸數為可調假設，級別歸屬如下。</p>
+        <div id="t5-pax-tbl"></div>
+        <p class="cnote">客機腹艙載貨無實測值，各級噸數純為假設。
+          日後若取得實際每日總貨量，可逐級回推校正。</p>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h3>機型歸戶檢查</h3></div>
+        <p class="chint">未列於上方對照表、改以預設值計算的機型。
+          比照航空公司對照表的作法：不讓頁面壞掉，但必須看得見。</p>
+        <div id="t5-unknown"></div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h3>推估方法與限制</h3></div>
+        <div id="t5-method"></div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><h3>已知資料缺口</h3></div>
+        <div class="banner info"><span>ℹ️</span><div id="t5-gaps"></div></div>
+      </div>
     </div>
   </section>
 
   <div class="foot">
+    <span id="freshness"></span><br>
     資料來源：TDX 桃園機場航班資料 · 經 Google Apps Script 清理<br>
     本頁於載入時即時讀取 Google Sheet，資料每日更新
   </div>
@@ -472,7 +627,9 @@ const CFG = {
       'TDX 不提供歷史回補，這兩天的取消改期資料再也補不回來。' +
       '架次類（flown）與延誤統計不受影響，仍從 7/5 起算。' +
       '此規則由特殊事件表以「只排除取消與改期統計」驅動，非寫死於程式。',
-    '無實際貨量：機型→貨量為推估，屬後續推計模組。',
+    '<b>無實際載貨量</b>：TDX 不提供每班機載貨量。頁籤 5 以「機型設計容量 × Load Factor」' +
+      '與「客機腹艙各級假設噸數」推估，全部係數皆為假設值、無實測可校驗。' +
+      '日後若取得實際貨量，應以之回推校正各級係數。',
     '無機尾號：算不出單機地面停留時間；車流壅塞改用「進出場架次密度」代理。',
     'Apron 僅貨機有值。',
     '缺值航點（代碼為 "."）無法自動回填。',
@@ -569,7 +726,7 @@ function reader(t){
    ================================================================ */
 const DB = {
   clean:[], fc:[], events:new Map(), airlines:new Map(),
-  snapshot:null, dates:[], weeks:[]
+  snapshot:null, dates:[], weeks:[], months:[]
 };
 
 function loadClean(t){
@@ -616,6 +773,9 @@ function loadClean(t){
   const wk = new Map();
   DB.dates.forEach(d => { const w = weekOf(d); wk.set(w.year+'-'+w.week, w); });
   DB.weeks = [...wk.values()].sort((a,b)=> a.monday < b.monday ? 1 : -1);   // 新到舊
+
+  // 月份清單（新到舊），供 1-4 平均架次與頁籤 5 每月尖峰摘要共用
+  DB.months = [...new Set(DB.dates.map(d => d.slice(0,7)))].sort().reverse();
 }
 
 function loadForecast(t){
@@ -848,8 +1008,9 @@ function barChart(host, o){
 }
 
 /**
- * 橫條圖：全部項目、由多至少、數字標於長條尾端，外層以捲軸瀏覽
- * items: [{label, value, color}]
+ * 橫條圖：全部項目、由多至少、數值標於長條尾端，外層以捲軸瀏覽
+ * items: [{key, label, value, color}]
+ * o.pct     ＝ true 時尾端標「佔比%（架次）」而非單純架次
  */
 function hbarChart(host, items, o){
   o = o || {};
@@ -862,9 +1023,11 @@ function hbarChart(host, items, o){
   host.appendChild(box);
   mount(box, (W) => {
     if (!items.length) { box.innerHTML = '<div class="empty">無資料</div>'; return null; }
+    const total = items.reduce((s,d) => s + d.value, 0) || 1;
+    const valTxt = d => o.pct ? `${(d.value/total*100).toFixed(1)}%（${d.value}）` : String(d.value);
     // 標籤欄寬依最長標籤動態計算（機型如 B747-400 比航司代碼長得多），上限四成避免吃掉長條
     const lw = Math.min(W*0.42, Math.max(34, Math.max(...items.map(d => textW(d.label, 15))) + 10));
-    const vw = Math.max(...items.map(d => textW(String(d.value), 14))) + 10;
+    const vw = Math.max(...items.map(d => textW(valTxt(d), 14))) + 10;
     const H  = items.length * rowH + 4;
     const iw = Math.max(20, W - lw - vw - 4);
     const max = Math.max(...items.map(d => d.value), 1);
@@ -875,9 +1038,9 @@ function hbarChart(host, items, o){
                                    fill:'#1c1f23' }, d.label));
       const w = Math.max(1, (d.value/max) * iw);
       svg.appendChild(el('rect', { x:lw, y:yy, width:w, height:bh, fill:d.color, rx:2 }));
-      // 數字標於長條尾端
+      // 數值標於長條尾端
       svg.appendChild(el('text', { x:lw+w+5, y:yy+bh/2+5, 'font-size':14,
-                                   'font-weight':650, fill:'#5b6470' }, String(d.value)));
+                                   'font-weight':650, fill:'#5b6470' }, valTxt(d)));
     });
     return svg;
   });
@@ -1003,11 +1166,11 @@ function cellVals(grid, valid){
  * grid[dow][hour]＝架次；heads[dow]＝表頭副標；valid[dow]＝該日是否在統計母體內。
  * 0 架：不上色，但仍顯示「0」—— 有紀錄且真的是 0。
  * 非母體日（未到達／當日未定稿）：整欄留白，不可與「0 架」混為一談。
- * hi[dow][hour]＝true → 高亮該格（其餘淡化）
  */
-function heatmap(title, grid, heads, cls, hi, valid, levels){
-  const any = hi && hi.some(r => r.some(Boolean));
-  let s = `<table class="hm ${cls}"><caption>${esc(title)}</caption><thead><tr><th class="hr"></th>`;
+function heatmap(title, grid, heads, cls, valid, levels){
+  // title 留空時完全不輸出 caption —— 空的 caption 仍會佔一行 padding，看起來像莫名的空隙
+  let s = `<table class="hm ${cls}">${title ? `<caption>${esc(title)}</caption>` : ''}` +
+          `<thead><tr><th class="hr"></th>`;
   for (let d=0; d<7; d++)
     s += `<th>${WD[(d+1)%7]}<br><span style="color:var(--ink3);font-weight:400">${heads[d]||''}</span></th>`;
   s += '</tr></thead><tbody>';
@@ -1016,8 +1179,7 @@ function heatmap(title, grid, heads, cls, hi, valid, levels){
     for (let d=0; d<7; d++){
       if (valid && !valid[d]) { s += '<td class="na"></td>'; continue; }
       const v = grid[d][h] || 0;
-      const on = any ? (hi[d][h] ? ' hl' : ' dim') : '';
-      s += `<td class="${densOf(v, levels)}${on}">${v}</td>`;
+      s += `<td class="${densOf(v, levels)}">${v}</td>`;
     }
     s += '</tr>';
   }
@@ -1043,6 +1205,12 @@ function hmKey(t, variant, label){
    ================================================================ */
 const DIR_LABEL  = { all:'起+降', DEP:'起飛', ARR:'降落' };
 const KIND_LABEL = { all:'全部', cargo:'貨運', pax:'客運' };
+/**
+ * 圖例項目用的類別前綴。取代原本另外標一行「目前檢視：貨運·起+降」的作法 ——
+ * 範圍直接寫進每個項目名稱（如「貨運預期起飛」），讀圖時不必在兩處之間來回對照。
+ * all 讀作「客貨」而非 KIND_LABEL 的「全部」：接在「起飛」前面時，「客貨起飛」才通順。
+ */
+const KPRE = { all:'客貨', cargo:'貨運', pax:'客運' };
 const dowIdx = s => (isoToDate(s).getDay() + 6) % 7;        // 0=Mon … 6=Sun
 
 /**
@@ -1080,15 +1248,14 @@ function seg(host, opts, cur, on){
 function segSync(host, cur){
   $$('button', host).forEach(b => b.setAttribute('aria-pressed', String(b.__v === cur)));
 }
-/** 起降/客貨的圖例名稱隨篩選即時更新（避免混淆） */
-const scopeName = (kind, dir) => KIND_LABEL[kind] + '·' + DIR_LABEL[dir];
-
 function dirSeries(kind, dir, mk){
-  // dir=all → 起飛/降落堆疊分色；否則單一序列
+  // dir=all → 起飛/降落堆疊分色；否則單一序列。
+  // 名稱帶上類別前綴（「貨運起飛」），範圍即寫在圖例裡，不必另標「目前檢視」。
+  const p = KPRE[kind];
   return dir === 'all'
-    ? [ { name:'起飛', color:'var(--dep)', data: mk('DEP') },
-        { name:'降落', color:'var(--arr)', data: mk('ARR') } ]
-    : [ { name:DIR_LABEL[dir], color: dir==='DEP' ? 'var(--dep)' : 'var(--arr)', data: mk(dir) } ];
+    ? [ { name:p+'起飛', color:'var(--dep)', data: mk('DEP') },
+        { name:p+'降落', color:'var(--arr)', data: mk('ARR') } ]
+    : [ { name:p+DIR_LABEL[dir], color: dir==='DEP' ? 'var(--dep)' : 'var(--arr)', data: mk(dir) } ];
 }
 const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || v;
 function resolveColors(series){
@@ -1096,12 +1263,11 @@ function resolveColors(series){
   return series;
 }
 /**
- * 圖例。scope＝當前檢視範圍（如「貨運·起+降」），獨立標示一次即可 ——
- * 若把範圍併進每個項目名稱，會出現「起飛（貨運·起+降）」這種自相矛盾的字串。
+ * 圖例。範圍（貨運／客運、起飛／降落）直接寫在每個項目名稱裡，如「貨運預期起飛」——
+ * 先前另標一行「目前檢視：貨運·起+降」，讀者得在兩處之間來回對照才知道每個色塊代表什麼。
  */
-function legend(host, items, scope){
+function legend(host, items){
   host.innerHTML =
-    (scope ? `<span style="font-weight:650;color:var(--ink)">目前檢視：${esc(scope)}</span>` : '') +
     items.map(i =>
       `<span><i style="background:${i.hatch
         ? `repeating-linear-gradient(45deg,${i.color} 0 3px,#fff 3px 6px)` : i.color};
@@ -1113,7 +1279,7 @@ function legend(host, items, scope){
    ================================================================ */
 // 1-1、1-2、1-3 各有自己的客貨切換（互不連動）；1-2 與 1-3 各有獨立週次選單
 const S1 = { date:null, kind:'all', dir:'all', avg:false,
-             week:null, kindB:'all', weekC:null, kind3:'cargo' };
+             week:null, kindB:'all', weekC:null, kind3:'cargo', month:null };
 
 function initT1(){
   // 日期選單：7/5 起 ～ 前一日（當日未定稿不列入）
@@ -1149,6 +1315,14 @@ function initT1(){
   seg($('#t1b-kind'), KINDS, ()=>S1.kindB, v => { S1.kindB=v; segSync($('#t1b-kind'),v); drawT1b(); });
   seg($('#t1c-kind'), [{v:'cargo',label:'貨運'},{v:'pax',label:'客運'}], ()=>S1.kind3,
       v => { S1.kind3=v; segSync($('#t1c-kind'),v); drawT1c(); });
+
+  // 1-4 月份選單（新到舊，預設最新月）
+  const msel = $('#t1d-month');
+  msel.innerHTML = DB.months.map(m =>
+    `<option value="${m}">${m.slice(0,4)} 年 ${+m.slice(5,7)} 月</option>`).join('');
+  S1.month = DB.months[0] || null;
+  msel.value = S1.month;
+  msel.onchange = () => { S1.month = msel.value; drawT1d(); };
 
   drawT1a(); drawT1b(); drawT1c(); drawT1d();
 }
@@ -1187,8 +1361,7 @@ function drawT1a(){
     yTitle:'架次數', xTitle:'時間（時）'
   });
   legend($('#t1-legend'), series.map(s => ({ name:s.name, color:s.color }))
-    .concat(lines.map(l => ({ name:l.name, color:l.color, line:true }))),
-    scopeName(S1.kind, S1.dir));
+    .concat(lines.map(l => ({ name:l.name, color:l.color, line:true }))));
 }
 
 function drawT1b(){
@@ -1198,8 +1371,8 @@ function drawT1b(){
   const rows = flown(DB.clean);
   const mk = d => days.map(dt => dt ? filt(rows.filter(r => r.adate === dt), S1.kindB, d).length : 0);
   const series = resolveColors([
-    { name:'起飛', color:cssVar('--dep'), data: mk('DEP') },
-    { name:'降落', color:cssVar('--arr'), data: mk('ARR') }
+    { name:KPRE[S1.kindB]+'起飛', color:cssVar('--dep'), data: mk('DEP') },
+    { name:KPRE[S1.kindB]+'降落', color:cssVar('--arr'), data: mk('ARR') }
   ]);
   barChart($('#t1b-chart'), {
     // 缺資料日留白（值為 0 即不畫長條）；事件日僅於日期旁標 ⚠＋事件分類，不改長條顏色。
@@ -1209,7 +1382,7 @@ function drawT1b(){
     series, showValues:true, height:280,
     yTitle:'架次數', xTitle:'日期'
   });
-  legend($('#t1b-legend'), series.map(s => ({ name:s.name, color:s.color })), KIND_LABEL[S1.kindB]);
+  legend($('#t1b-legend'), series.map(s => ({ name:s.name, color:s.color })));
 }
 
 function drawT1c(){
@@ -1229,17 +1402,28 @@ function drawT1c(){
   const D = build('DEP'), R = build('ARR');
   const lv = levelsOf(cellVals(D, valid).concat(cellVals(R, valid)), S1.kind3);
   const kl = KIND_LABEL[S1.kind3];
-  // 起飛（藍）、降落（橘）各自的圖例，色系與圖面一致
+  // 起飛（藍）、降落（橘）各自的圖例，色系與圖面一致。
+  // 標題只由 hmKey 的粗體標籤負責，heatmap 的 caption 傳空字串 ——
+  // 兩邊都給就會出現「起飛 · 貨運」上下重複兩行。
   $('#t1c-hm').innerHTML =
-    `<div>${hmKey(lv, 'dep', `起飛 · ${kl}`)}${heatmap(`起飛 · ${kl}`, D, heads, 'dep', null, valid, lv)}</div>` +
-    `<div>${hmKey(lv, 'arr', `降落 · ${kl}`)}${heatmap(`降落 · ${kl}`, R, heads, 'arr', null, valid, lv)}</div>`;
+    `<div>${hmKey(lv, 'dep', `起飛 · ${kl}`)}${heatmap('', D, heads, 'dep', valid, lv)}</div>` +
+    `<div>${hmKey(lv, 'arr', `降落 · ${kl}`)}${heatmap('', R, heads, 'arr', valid, lv)}</div>`;
 }
 
+/**
+ * 平均架次：依選定月份計算。
+ * 母體為該月週一至五、排除特殊日的日期；資料完整度差異很大（當月仍在累積、
+ * 首月從月中才開始），故一律於表格下方交代母體日數與涵蓋區間，讓讀者自行判斷可信度。
+ */
 function drawT1d(){
-  const days = DB.dates.filter(d => !isExcl(d));
-  const wd   = days.filter(d => { const g = dowOf(d); return g >= 1 && g <= 5; });   // 週一至五
   const host = $('#t1d-body');
-  if (!wd.length){ host.innerHTML = '<div class="empty">尚無常態工作日資料</div>'; return; }
+  const mo   = S1.month;
+  const inMo = DB.dates.filter(d => d.startsWith(mo));
+  const wd   = inMo.filter(d => !isExcl(d) && dowOf(d) >= 1 && dowOf(d) <= 5);   // 週一至五
+  if (!wd.length){
+    host.innerHTML = '<div class="empty">當月尚無常態工作日資料</div>';
+    return;
+  }
 
   const rows = flown(DB.clean);
   const cell = (kind, dir) => {
@@ -1253,9 +1437,16 @@ function drawT1d(){
     const m = Math.max(...avg);
     return m > 0 ? `${avg.indexOf(m)}時（${m.toFixed(1)}）` : '—';
   };
+
+  // 該月理論上的週一至五天數，用來說明「已涵蓋多少」
+  const y = +mo.slice(0,4), mm = +mo.slice(5,7);
+  const dim = new Date(y, mm, 0).getDate();
+  let wdTotal = 0;
+  for (let i = 1; i <= dim; i++){ const g = new Date(y, mm-1, i).getDay(); if (g>=1 && g<=5) wdTotal++; }
+  const excl = inMo.filter(d => isExcl(d) && dowOf(d) >= 1 && dowOf(d) <= 5).length;
+  const cur  = iso(new Date()).slice(0,7) === mo;
+
   host.innerHTML = `
-    <div class="banner warn"><span>⚠</span><div>目前僅 <b>${wd.length}</b> 個常態工作日（已排除特殊日），
-      規律未穩，數值僅供參考。累積滿一個月後此區塊改以分位校準。</div></div>
     <div class="scrollx"><table class="tbl">
       <thead><tr><th class="l">類型</th><th>平均每日起飛</th><th>平均每日降落</th>
         <th>平均每日合計</th><th>平均尖峰時段</th></tr></thead>
@@ -1266,8 +1457,11 @@ function drawT1d(){
           <td><b>${cell(k,'all').toFixed(1)}</b></td>
           <td>${peak(k)}</td></tr>`).join('')}
       </tbody></table></div>
-    <p class="chint" style="margin-top:8px">母體：週一至五、排除特殊日，共 ${wd.length} 日
-      （${md(wd[0])} – ${md(wd[wd.length-1])}）。</p>`;
+    <p class="cnote"><b>資料狀況</b>：母體為 ${md(wd[0])}–${md(wd[wd.length-1])} 的
+      <b>${wd.length}</b> 個週一至五，該月共 ${wdTotal} 個週一至五
+      ${excl ? `，其中 ${excl} 日因特殊事件排除` : ''}。
+      ${cur ? '本月仍在累積，數值會隨每日資料進來而變動。' : ''}
+      ${wd.length < 10 ? '樣本偏少，規律未穩，數值僅供參考。' : ''}</p>`;
 }
 
 /* ================================================================
@@ -1295,70 +1489,77 @@ function tally(rows, pick, seed){
   return [...m.entries()].sort((a,b)=>b[1]-a[1])
     .map(([k,v]) => ({ key:k, label:labelOf(k), value:v, color:colorOf(k, seed) }));
 }
-function barPie(barId, pieId, items){
-  hbarChart($(barId), items, { visible:8 });
-  pieChart($(pieId), items);
-}
-
-const S2 = { sub:'compose', kind:'cargo', airline:null, point:null };
+const S2 = { kind:'cargo' };
 
 function initT2(){
-  seg($('#t2-sub'), [{v:'compose',label:'航班組成'},{v:'airline',label:'航空公司貨機分析'}],
-      ()=>S2.sub, v => {
-        S2.sub = v; segSync($('#t2-sub'), v);
-        $('#t2-compose').hidden = v !== 'compose';
-        $('#t2-airline').hidden = v !== 'airline';
-        // 控制列隨模式切換：組成看貨機/客機，貨機分析看航空公司
-        $('#t2-kind-wrap').hidden  = v !== 'compose';
-        $('#t2-alsel-wrap').hidden = v !== 'airline';
-        if (v === 'compose') drawT2a(); else drawT2b();
-      });
   seg($('#t2-kind'), [{v:'cargo',label:'貨機'},{v:'pax',label:'客機'}], ()=>S2.kind,
       v => { S2.kind = v; segSync($('#t2-kind'), v); drawT2a(); });
-
-  const cargo = flown(DB.clean).filter(r => r.cargo);
-  const als = [...new Set(cargo.map(r => r.airline))]
-    .map(a => ({ a, n: cargo.filter(r => r.airline === a).length }))
-    .sort((x,y) => y.n - x.n);
-  const sel = $('#t2-alsel');
-  sel.innerHTML = als.map(x => {
-    const info = DB.airlines.get(x.a);
-    // 架次不放在選項裡（選單只負責選擇），改於下方航司橫幅呈現
-    return `<option value="${esc(x.a)}">${esc(info && info.zh ? `${x.a}　${info.zh}` : x.a)}</option>`;
-  }).join('');
-  S2.airline = als[0] ? als[0].a : null;
-  sel.value = S2.airline;
-  sel.onchange = () => { S2.airline = sel.value; S2.point = null; drawT2b(); };
-
-  // 初始狀態同步：預設為「航班組成」，故只顯示貨機/客機控制列，航空公司選單隱藏
-  $('#t2-kind-wrap').hidden  = S2.sub !== 'compose';
-  $('#t2-alsel-wrap').hidden = S2.sub !== 'airline';
   drawT2a();
 }
 
 function drawT2a(){
   const rows = flown(DB.clean).filter(r => S2.kind === 'cargo' ? r.cargo : !r.cargo);
-  barPie('#t2-al-bar',  '#t2-al-pie',  tally(rows, r => r.airline, 0));
-  barPie('#t2-ac-bar',  '#t2-ac-pie',  tally(rows, r => r.ac, 7));
+  pieChart($('#t2-al-pie'),  tally(rows, r => r.airline, 0));
+  pieChart($('#t2-ac-pie'),  tally(rows, r => r.ac, 7));
   // 目的地看起飛的 ArrivalAirport；來源地看降落的 DepartureAirport；共用 CMAP → 同代碼同色
-  barPie('#t2-dst-bar', '#t2-dst-pie', tally(rows.filter(r => r.dir === 'DEP'), r => r.arr, 3));
-  barPie('#t2-src-bar', '#t2-src-pie', tally(rows.filter(r => r.dir === 'ARR'), r => r.dep, 3));
+  pieChart($('#t2-dst-pie'), tally(rows.filter(r => r.dir === 'DEP'), r => r.arr, 3));
+  pieChart($('#t2-src-pie'), tally(rows.filter(r => r.dir === 'ARR'), r => r.dep, 3));
+
+  // 原本各主題並列一張橫條圖列出全部項目，但資料會持續累積、名次早已穩定，
+  // 逐列讀絕對架次的意義不大。改為只留圓餅圖看結構，母體大小改於此處交代。
+  $('#t2-basis').innerHTML =
+    `母體：${S2.kind === 'cargo' ? '貨機' : '客機'}已飛航班 <b>${fmtInt(rows.length)}</b> 筆，` +
+    `涵蓋 ${md(DB.dates[0])}–${md(DB.dates[DB.dates.length-1])} 共 <b>${DB.dates.length}</b> 日。` +
+    `資料每日累積，佔比會隨之微調。`;
 }
 
-function drawT2b(){
-  const A = S2.airline;
-  const rows = flown(DB.clean).filter(r => r.cargo && r.airline === A);
-  const info = DB.airlines.get(A);
+/* ================================================================
+   頁籤 6 — 航空公司貨機分析
+   ================================================================ */
+const S6 = { airline:null, week:null, point:'all' };
+
+function initT6(){
+  const cargo = flown(DB.clean).filter(r => r.cargo);
+  const als = [...new Set(cargo.map(r => r.airline))]
+    .map(a => ({ a, n: cargo.filter(r => r.airline === a).length }))
+    .sort((x,y) => y.n - x.n);
+  const sel = $('#t6-alsel');
+  sel.innerHTML = als.map(x => {
+    const info = DB.airlines.get(x.a);
+    return `<option value="${esc(x.a)}">${esc(info && info.zh ? `${x.a}　${info.zh}` : x.a)}</option>`;
+  }).join('');
+  S6.airline = als[0] ? als[0].a : null;
+  sel.value = S6.airline;
+  sel.onchange = () => { S6.airline = sel.value; S6.point = 'all'; drawT6(); };
+
+  // 熱力圖週次選單（新到舊，預設最新週）
+  const ws = $('#t6-week');
+  ws.innerHTML = DB.weeks.map(w =>
+    `<option value="${w.monday}">${w.week} 週（${md(w.monday)}–${md(addDays(w.monday,6))}）</option>`).join('');
+  S6.week = DB.weeks[0] ? DB.weeks[0].monday : null;
+  ws.value = S6.week;
+  ws.onchange = () => { S6.week = ws.value; drawT6hm(); };
+
+  $('#t6-point').onchange = e => { S6.point = e.target.value; drawT6hm(); };
+
+  drawT6();
+}
+
+/** 該司貨機的已飛班次（全期間） */
+const t6Rows = () => flown(DB.clean).filter(r => r.cargo && r.airline === S6.airline);
+/** 起飛看目的地、降落看來源地 */
+const pointOf = r => r.dir === 'DEP' ? r.arr : r.dep;
+
+function drawT6(){
+  const A = S6.airline, rows = t6Rows(), info = DB.airlines.get(A);
 
   // 航司橫幅：對照表未接上時降級為只顯示代碼
-  $('#t2-banner').innerHTML = info
-    ? `<div class="ctitle"><h2 style="font-size:20px">${esc(A)}</h2>
-         <span style="font-size:15px;font-weight:600">${esc(info.zh||'')}</span></div>
-       <p class="chint" style="font-size:12.5px">${esc(info.en||'')}
-         ${info.hub ? `　·　主要基地／樞紐：<b>${esc(info.hub)}</b>` : ''}
-         　·　貨機已飛 <b>${rows.length}</b> 架次</p>`
-    : `<div class="ctitle"><h2 style="font-size:20px">${esc(A)}</h2></div>
-       <p class="chint">貨機已飛 <b>${rows.length}</b> 架次</p>
+  $('#t6-banner').innerHTML = info
+    ? `<div class="ctitle"><h2 style="font-size:28px">${esc(A)}</h2>
+         <span style="font-size:22px;font-weight:650">${esc(info.zh||'')}</span></div>
+       <p class="chint" style="font-size:17px">${esc(info.en||'')}
+         ${info.hub ? `　·　主要基地／樞紐：<b>${esc(info.hub)}</b>` : ''}</p>`
+    : `<div class="ctitle"><h2 style="font-size:28px">${esc(A)}</h2></div>
        <div class="banner info" style="margin-top:9px"><span>ℹ️</span><div>${
          DB.airlines.size
            // 對照表已接上，但查無此代碼 —— 與「整張表沒接上」是不同的問題，訊息要分開
@@ -1367,52 +1568,53 @@ function drawT2b(){
            : '尚未接上「航空公司對照表」，暫僅顯示 IATA 代碼。'
        }</div></div>`;
 
-  // 2-3 主要機型
-  const acs = tally(rows, r => r.ac, 7);
-  $('#t2-actbl').innerHTML = acs.length ? `<div class="scrolly" style="max-height:200px">
-    <table class="tbl"><thead><tr><th class="l">機型</th><th>架次</th></tr></thead>
-    <tbody>${acs.map(d => `<tr><td class="l">${esc(d.label)}</td><td>${d.value}</td></tr>`).join('')}</tbody>
-    </table></div>` : '<div class="empty">無資料</div>';
+  // 主要機型與主要航點並排，兩張圖等高，視覺份量才對等
+  const H = 300;
+  pieChart($('#t6-acpie'), tally(rows, r => r.ac, 7), { height:H });
+  const pts = tally(rows, pointOf, 3);
+  hbarChart($('#t6-ptbar'), pts, { visible: Math.floor((H-6)/28), pct:true });
 
-  // 2-4 主要航點（可點按鈕）
-  const pts = tally(rows, r => r.dir === 'DEP' ? r.arr : r.dep, 3);
-  $('#t2-pttbl').innerHTML = pts.length ? `<div class="scrolly" style="max-height:200px">
-    <div class="chips">${pts.map(d =>
-      `<button class="chip" data-pt="${esc(d.key)}" aria-pressed="${S2.point===d.key}"
-        >${esc(d.label)}　${d.value}</button>`).join('')}</div></div>` : '<div class="empty">無資料</div>';
-  $$('#t2-pttbl .chip').forEach(b => b.onclick = () => {
-    S2.point = (S2.point === b.dataset.pt) ? null : b.dataset.pt;   // 再點取消
-    drawT2b();
-  });
+  // 熱力圖的航點選單隨航司更新
+  const ps = $('#t6-point');
+  ps.innerHTML = `<option value="all">全部航點</option>` +
+    pts.map(d => `<option value="${esc(d.key)}">${esc(d.label)}</option>`).join('');
+  if (!pts.some(d => d.key === S6.point)) S6.point = 'all';
+  ps.value = S6.point;
 
-  drawT2hm(rows);
+  drawT6hm();
 }
 
-function drawT2hm(rows){
-  const P = S2.point;
-  // 該司自身的分位 → 班次少的航司門檻自動降低
+/** 航司熱力圖：選定週次 × 選定航點，看得出該司這一週的實際班表 */
+function drawT6hm(){
+  const P = S6.point;
+  const rows = P === 'all' ? t6Rows() : t6Rows().filter(r => pointOf(r) === P);
+  const days = weekDays(S6.week);                       // 非母體日為 null
+  const cal  = Array.from({length:7}, (_,i) => addDays(S6.week, i));
+  const valid = days.map(d => !!d);
   const build = dir => {
-    const g  = Array.from({length:7}, () => new Array(24).fill(0));
-    const hi = Array.from({length:7}, () => new Array(24).fill(false));
+    const g = Array.from({length:7}, () => new Array(24).fill(0));
     rows.filter(r => r.dir === dir).forEach(r => {
       if (!r.adate || r.ahour == null) return;
-      const d = dowIdx(r.adate);
-      g[d][r.ahour]++;
-      if (P && (dir === 'DEP' ? r.arr : r.dep) === P) hi[d][r.ahour] = true;
+      const d = days.indexOf(r.adate);
+      if (d >= 0) g[d][r.ahour]++;
     });
-    return { g, hi };
+    return g;
   };
   const D = build('DEP'), R = build('ARR');
-  const heads = Array.from({length:7}, () => '');
-  // 分級同貨機固定門檻，使不同航司之間可直接對照
+  const heads = cal.map(d => md(d) + (evOf(d) ? ' ⚠' : ''));
+  // 分級同貨機固定門檻，使不同航司、不同週次之間可直接對照
   const lv = CARGO_LEVELS;
-  $('#t2-hm').innerHTML =
-    `<div>${hmKey(lv, 'dep', '起飛')}${heatmap('起飛', D.g, heads, 'dep', P ? D.hi : null, null, lv)}</div>` +
-    `<div>${hmKey(lv, 'arr', '降落')}${heatmap('降落', R.g, heads, 'arr', P ? R.hi : null, null, lv)}</div>`;
-  $('#t2-hlnote').innerHTML = P
-    ? `<div class="banner info"><span>🔍</span><div>目前高亮：<b>${esc(labelOf(P))}</b>
-       航線的航班時段（起飛＝飛往 ${esc(labelOf(P))}，降落＝來自 ${esc(labelOf(P))}），其餘時段淡化。
-       再點一次該航點按鈕可取消。</div></div>` : '';
+  $('#t6-hm').innerHTML =
+    `<div>${hmKey(lv, 'dep', '起飛')}${heatmap('', D, heads, 'dep', valid, lv)}</div>` +
+    `<div>${hmKey(lv, 'arr', '降落')}${heatmap('', R, heads, 'arr', valid, lv)}</div>`;
+
+  const n = D.flat().reduce((a,b)=>a+b,0) + R.flat().reduce((a,b)=>a+b,0);
+  const scope = P === 'all' ? '' :
+    `　航點篩選：<b>${esc(labelOf(P))}</b>（起飛＝飛往該地，降落＝來自該地）。`;
+  $('#t6-hmnote').innerHTML = n
+    ? `本週共 <b>${n}</b> 架次。${scope}
+       空白格為該時段無航班；整欄留白為不在統計母體內的日子（尚未到達／當日未定稿）。`
+    : `<b>本週此範圍無任何航班。</b>${scope}可切換週次或航點查看。`;
 }
 
 /* ================================================================
@@ -1447,12 +1649,10 @@ function delayStats(rows){
 function drawT3(){
   const cargo = DB.clean.filter(r => r.cargo);
   const norm  = normal(cargo);
-  const A = delayStats(norm), B = delayStats(cargo);
+  const A = delayStats(norm);
 
-  // 分兩區塊：延誤類與取消改期類的母體不同（後者另排除資料不可信日）。
-  // 若混在同一串列裡，讀者會很自然地拿「已飛架次」去除「取消或改期數」而對不上帳 ——
-  // 用區塊分隔並各自標明母體，比加一個 † 註腳可靠。
-  // 列名精簡到不換行為止 —— 區塊標頭已載明脈絡（延誤／取消或改期），列名不需重複整串
+  // 延誤類與取消改期類的母體不同（後者另排除資料不可信日），故分兩區塊並各自標明母體，
+  // 避免讀者拿「已飛架次」去除「取消或改期數」而對不上帳。
   const GROUPS = [
     { head: s => `延誤　<span style="font-weight:500;opacity:.75">母體 ${fmtInt(s.n)} 班（已飛）</span>`,
       rows: [
@@ -1466,69 +1666,81 @@ function drawT3(){
         ['比率', s => fmtPct(s.unresP)]
       ] }
   ];
-  const col = (cls, head, s) => `<div class="col ${cls}"><div class="ch">${head}</div>
+  $('#t3-dual').innerHTML = `<div class="col norm"><div class="ch">常態（排除特殊日）</div>
     ${GROUPS.map(g =>
-      (g.head ? `<div class="sh">${g.head(s)}</div>` : '') +
-      g.rows.map(([k,f]) => `<div class="row"><span class="k">${k}</span><span class="v">${f(s)}</span></div>`).join('')
+      `<div class="sh">${g.head(A)}</div>` +
+      g.rows.map(([k,f]) => `<div class="row"><span class="k">${k}</span><span class="v">${f(A)}</span></div>`).join('')
     ).join('')}</div>`;
-  $('#t3-dual').innerHTML = col('norm','常態（排除特殊日）', A) + col('all','全部（含特殊日）', B);
 
-  const evDays  = DB.dates.filter(d => isExcl(d));
-  const unDays  = DB.dates.filter(d => modeOf(d) === 'unres');
-  const allDays = DB.dates.length;
+  const evDays = DB.dates.filter(d => isExcl(d));
+  const unDays = DB.dates.filter(d => modeOf(d) === 'unres');
   $('#t3-base').innerHTML =
-    `基準日數：常態 <b>${allDays - evDays.length}</b> 日／全部 <b>${allDays}</b> 日　·
-     特殊日（排除於常態統計）<b>${evDays.length}</b> 日${evDays.length ? '：' + evDays.map(md).join('、') : ''}
-     ${unDays.length ? `<br>「取消或改期」區塊另外排除 <b>${unDays.map(md).join('、')}</b>
-       （${esc(unDays.map(d => evOf(d).cat).filter((v,i,a)=>a.indexOf(v)===i).join('、'))}：TDX 抓取起始於
-       07/06 傍晚，該兩日「表定但未起飛」的班次從未被記錄，且無法回補），故其母體與上方區塊不同。
-       該兩日的<b>架次與延誤資料完好，仍完整納入</b>上方統計。` : ''}`;
+    `全部 <b>${DB.dates.length}</b> 日中，取 <b>${DB.dates.length - evDays.length}</b> 個常態日${
+     evDays.length
+       ? `，排除 ${evDays.length} 個特殊日（${evDays.map(d => md(d) + ' ' + esc(evOf(d).cat)).join('、')}）`
+       : ''}。
+     ${unDays.length ? `「取消或改期」另外排除 ${unDays.map(md).join('、')}。
+       該兩日的架次與延誤資料完好，仍完整納入。` : ''}`;
 
-  // 3-2a 常態延遲分佈：母體 flown，六互斥分箱，加總 100%
-  const ca = binCounts(norm.filter(r => r.status === 'flown'));
-  pieChart($('#t3-pie-a'),
-    CFG.bins.map((b,i) => ({ label:b.label, value:ca[i], color:b.color })), { group:false, height:280 });
-
-  // 3-2b 真實狀況分佈：母體 flown + unresolved，多一塊「取消或改期」。
-  // 兩者都必須限縮在可信區間內 —— 若 flown 取 7/5 起而 unresolved 取 7/7 起，
+  // 3-2 延遲與取消航班數量分布：母體 flown + unresolved，六分箱外多一塊「取消或改期」。
+  // 兩者都必須限縮在可信區間內 —— 若 flown 取全期間而 unresolved 只取可信段，
   // 「取消或改期」那一塊的佔比會被低估。
-  const win = cargo.filter(unresTrusted);
-  const cb = binCounts(win.filter(r => r.status === 'flown'));
-  pieChart($('#t3-pie-b'),
+  const win = normal(cargo).filter(unresTrusted);
+  // 母體＝已飛＋取消或改期。不可用 win.length —— 那還包含 cancelled（客機取消統計專用，
+  // 不畫在此圖上），會讓標示的母體比圖上實際加總多出幾班而對不起來。
+  const nFl = win.filter(r => r.status === 'flown').length;
+  const nUn = win.filter(r => r.status === 'unresolved').length;
+  const cb  = binCounts(win.filter(r => r.status === 'flown'));
+  pieChart($('#t3-pie'),
     CFG.bins.map((b,i) => ({ label:b.label, value:cb[i], color:b.color }))
-      .concat([{ label:'取消或改期', value: win.filter(r=>r.status==='unresolved').length,
-                 color:CFG.unresolvedColor }]), { group:false, height:290 });
-  $('#t3-pie-b-note').innerHTML = unDays.length
-    ? `母體 <b>${fmtInt(win.length)}</b> 班，已排除 <b>${unDays.map(md).join('、')}</b>
-       （取消或改期資料未被記錄，無法回補）。3-2a 不含 unresolved，故不受影響、仍為完整母體。`
-    : '';
+      .concat([{ label:'取消或改期', value:nUn, color:CFG.unresolvedColor }]),
+    { group:false, height:300 });
+  $('#t3-pie-note').innerHTML =
+    `母體 <b>${fmtInt(nFl + nUn)}</b> 班（已飛 ${fmtInt(nFl)}＋取消或改期 ${fmtInt(nUn)}）。` +
+    (unDays.length ? `已排除特殊日與 ${unDays.map(md).join('、')}。` : '已排除特殊日。');
 
   // 3-3 各航司延遲狀況（排除特殊日，依架次排序）
   const byAl = new Map();
-  norm.filter(r => r.status === 'flown').forEach(r =>
-    byAl.set(r.airline, (byAl.get(r.airline)||[]).concat([r])));
-  const list = [...byAl.entries()].sort((a,b) => b[1].length - a[1].length);
+  norm.forEach(r => byAl.set(r.airline, (byAl.get(r.airline)||[]).concat([r])));
+  const list = [...byAl.entries()]
+    .map(([a, all]) => {
+      const fl = all.filter(r => r.status === 'flown');
+      // 取消比率的分子與分母同樣須落在可信區間內，否則分母被灌水而低估比率
+      const tf = fl.filter(unresTrusted).length;
+      const tu = all.filter(r => r.status === 'unresolved' && unresTrusted(r)).length;
+      return { a, fl, n: fl.length, cancelP: (tf + tu) ? tu/(tf+tu)*100 : null };
+    })
+    .filter(x => x.n)
+    .sort((x,y) => y.n - x.n);
+
   $('#t3-tbl').innerHTML = `<div class="scrolly" style="max-height:340px"><div class="scrollx">
     <table class="tbl"><thead><tr>
-      <th class="l">航司</th><th class="l">英文名稱</th><th>架次</th><th>中位延遲</th>
+      <th class="l">航司</th><th class="l">英文名稱</th><th>中位延遲</th>
       ${CFG.bins.map(b => `<th style="border-bottom:2px solid ${b.color}">${b.label}</th>`).join('')}
+      <th style="border-bottom:2px solid ${CFG.unresolvedColor}">取消或改期比率</th>
+      <th>總計架次</th>
     </tr></thead><tbody>
-    ${list.map(([a, rs]) => {
-      const c = binCounts(rs), n = rs.length;
+    ${list.map(({a, fl, n, cancelP}) => {
+      const c = binCounts(fl);
       const info = DB.airlines.get(a);
       return `<tr>
         <td class="l"><b>${esc(a)}</b></td>
         <td class="l" style="max-width:150px;overflow:hidden;text-overflow:ellipsis">${esc(info && info.en ? info.en : '—')}</td>
-        <td>${n}</td>
-        <td>${median(rs.map(r=>r.delay).filter(v=>v!=null))} 分</td>
+        <td>${median(fl.map(r=>r.delay).filter(v=>v!=null))} 分</td>
         ${/* 佔比為主要資訊（大而深），架次為輔（小而淡） */''}
         ${c.map(v => v
           ? `<td><span class="pri">${(v/n*100).toFixed(0)}%</span><span class="sec">${v} 架</span></td>`
           : `<td><span class="pri" style="color:var(--ink3);font-weight:400">·</span></td>`).join('')}
+        <td><span class="pri">${fmtPct(cancelP)}</span></td>
+        <td><b>${n}</b></td>
       </tr>`;
     }).join('')}
-    </tbody></table></div></div>
-    ${DB.airlines.size ? '' : '<p class="chint" style="margin-top:8px">英文名稱待接上「航空公司對照表」後顯示。</p>'}`;
+    </tbody></table></div></div>`;
+  $('#t3-tbl-note').innerHTML =
+    `分箱佔比與中位延遲的母體為該司已飛架次（即「總計架次」）；` +
+    `取消或改期比率的母體為表定班次（已飛＋取消改期）${unDays.length
+      ? `，並另外排除 ${unDays.map(md).join('、')}` : ''}，故兩者不可互相換算。` +
+    (DB.airlines.size ? '' : '<br>英文名稱待接上「航空公司對照表」後顯示。');
 }
 
 /* ================================================================
@@ -1621,7 +1833,7 @@ function drawT4(){
 
 /* 4-1 昨日回顧：用 clean 回推，不需另存 forecast 歷史 */
 function drawT4a(Y){
-  const sc = scopeName(S4.kind, S4.dir);
+  const p     = KPRE[S4.kind];
   const all   = filt(DB.clean.filter(r => r.fdate === Y), S4.kind, S4.dir);        // 預期＝全部班
   const done  = filt(flown(DB.clean).filter(r => r.adate === Y), S4.kind, S4.dir); // 實績
   const unres = all.filter(r => r.status === 'unresolved').length;
@@ -1632,17 +1844,17 @@ function drawT4a(Y){
   // 昨日已成定局，非預報，故用實心而不用斜紋（斜紋只保留給「尚未發生」的班次）。
   const mk = d => bucket(all.filter(r => S4.dir === 'all' ? r.dir === d : true), 'schedH');
   const series = S4.dir === 'all'
-    ? [ { name:'預期班表·起飛', color:cssVar('--dep'), data: mk('DEP') },
-        { name:'預期班表·降落', color:cssVar('--arr'), data: mk('ARR') } ]
-    : [ { name:'預期班表·'+DIR_LABEL[S4.dir],
+    ? [ { name:p+'預期起飛', color:cssVar('--dep'), data: mk('DEP') },
+        { name:p+'預期降落', color:cssVar('--arr'), data: mk('ARR') } ]
+    : [ { name:p+'預期'+DIR_LABEL[S4.dir],
           color: S4.dir==='DEP'?cssVar('--dep'):cssVar('--arr'), data: bucket(all, 'schedH') } ];
 
-  const lines = [{ name:'實際起降', color:'#111', data: actual }];
+  const lines = [{ name:p+'實際起降', color:'#111', data: actual }];
   barChart($('#t4a-chart'), { cats: HOURS, series: resolveColors(series), lines, height:290,
                               yTitle:'班次數', xTitle:'時間（時）' });
   legend($('#t4a-legend'),
     series.map(s => ({ name:s.name, color:s.color }))
-      .concat([{ name:lines[0].name, color:'#111', line:true }]), sc);
+      .concat([{ name:lines[0].name, color:'#111', line:true }]));
 
   kpis($('#t4a-kpi'), [
     { k:'預估總計', v: fmtInt(all.length), u:'班' },
@@ -1652,49 +1864,31 @@ function drawT4a(Y){
     // 隨起降切換調整數值（起飛只計起飛、降落只計降落）
     { k:'取消或改期', v: fmtInt(unres), u:'班' }
   ]);
-
-  // 預期以表定日計、實績以實際起降日計，跨日航班會落在兩個母體的邊界外，
-  // 使「預估 − 取消或改期 ≠ 實際」。差額雖小但每天都會出現，不說明會被當成算錯。
-  const schedFlown = all.filter(r => r.status === 'flown').length;
-  const gap = schedFlown - done.length;
-  $('#t4a-gap').innerHTML = gap
-    ? `預估 ${fmtInt(all.length)} 班中，${fmtInt(schedFlown)} 班起飛、${fmtInt(unres)} 班取消或改期。
-       「實際總計 ${fmtInt(done.length)}」與折線以<b>實際起降日</b>分桶，故差 ${fmtInt(Math.abs(gap))} 班 ——
-       該${fmtInt(Math.abs(gap))}班表定於 ${md(Y)}，實際起降跨至${gap > 0 ? '隔日' : '前一日'}。`
-    : '';
 }
 
 /* 4-2 今日 */
 function drawT4b(T){
-  const sc = scopeName(S4.kind, S4.dir);
+  const p = KPRE[S4.kind];
   const src = fcRows(T);
   if (!src.length) return fcEmpty('#t4b', T, '今日');
   const rows = filt(src, S4.kind, S4.dir);
-  const mk = (d, st) => bucket(rows.filter(r =>
-    (S4.dir === 'all' ? r.dir === d : true) && r.st === st), 'hour');
 
-  let series;
-  if (S4.dir === 'all'){
-    series = [
-      { name:'已發生·起飛', color:cssVar('--dep'), data: mk('DEP','actual') },
-      { name:'預期·起飛',   color:cssVar('--dep'), hatch:true, data: mk('DEP','scheduled') },
-      { name:'已發生·降落', color:cssVar('--arr'), data: mk('ARR','actual') },
-      { name:'預期·降落',   color:cssVar('--arr'), hatch:true, data: mk('ARR','scheduled') }
-    ];
-  } else {
-    const c = S4.dir === 'DEP' ? cssVar('--dep') : cssVar('--arr');
-    series = [
-      { name:'已發生·'+DIR_LABEL[S4.dir], color:c, data: bucket(rows.filter(r=>r.st==='actual'),'hour') },
-      { name:'預期·'+DIR_LABEL[S4.dir],   color:c, hatch:true, data: bucket(rows.filter(r=>r.st==='scheduled'),'hour') }
-    ];
-  }
+  // 不再分「已發生／預期」。預報一天只抓一次，同一份快照裡兩者的界線取決於抓取當下的時間，
+  // 而非讀者看頁面的時間 —— 分開呈現只會讓人以為畫面是即時更新的。整日一律視為預期班表。
+  const mk = d => bucket(rows.filter(r => S4.dir === 'all' ? r.dir === d : true), 'hour');
+  const series = S4.dir === 'all'
+    ? [ { name:p+'預期起飛', color:cssVar('--dep'), hatch:true, data: mk('DEP') },
+        { name:p+'預期降落', color:cssVar('--arr'), hatch:true, data: mk('ARR') } ]
+    : [ { name:p+'預期'+DIR_LABEL[S4.dir], hatch:true,
+          color: S4.dir==='DEP'?cssVar('--dep'):cssVar('--arr'), data: bucket(rows,'hour') } ];
+
   const lw = lastWeekLine(T);
   const lines = [{ name:`上週同星期實際（${md(lw.date)}）`, color:'#111', dash:'4 3', data: lw.data }];
   barChart($('#t4b-chart'), { cats:HOURS, series, lines, height:290,
                               yTitle:'班次數', xTitle:'時間（時）' });
   legend($('#t4b-legend'),
     series.map(s => ({ name:s.name, color:s.color, hatch:s.hatch }))
-      .concat([{ name:lines[0].name, color:'#111', line:true }]), sc);
+      .concat([{ name:lines[0].name, color:'#111', line:true }]));
 
   const tot = series.reduce((s,x) => s + sum(x.data), 0);
   const all = new Array(24).fill(0);
@@ -1708,15 +1902,15 @@ function drawT4b(T){
 
 /* 4-3 明日：全部為預期 */
 function drawT4c(N){
-  const sc = scopeName(S4.kind, S4.dir);
+  const p = KPRE[S4.kind];
   const src = fcRows(N);
   if (!src.length) return fcEmpty('#t4c', N, '明日');
   const rows = filt(src, S4.kind, S4.dir);
   const mk = d => bucket(rows.filter(r => S4.dir === 'all' ? r.dir === d : true), 'hour');
   const series = S4.dir === 'all'
-    ? [ { name:'預期·起飛', color:cssVar('--dep'), hatch:true, data: mk('DEP') },
-        { name:'預期·降落', color:cssVar('--arr'), hatch:true, data: mk('ARR') } ]
-    : [ { name:'預期·'+DIR_LABEL[S4.dir], hatch:true,
+    ? [ { name:p+'預期起飛', color:cssVar('--dep'), hatch:true, data: mk('DEP') },
+        { name:p+'預期降落', color:cssVar('--arr'), hatch:true, data: mk('ARR') } ]
+    : [ { name:p+'預期'+DIR_LABEL[S4.dir], hatch:true,
           color: S4.dir==='DEP'?cssVar('--dep'):cssVar('--arr'), data: bucket(rows,'hour') } ];
 
   const lw = lastWeekLine(N);
@@ -1725,7 +1919,7 @@ function drawT4c(N){
                               yTitle:'班次數', xTitle:'時間（時）' });
   legend($('#t4c-legend'),
     series.map(s => ({ name:s.name, color:s.color, hatch:true }))
-      .concat([{ name:lines[0].name, color:'#111', line:true }]), sc);
+      .concat([{ name:lines[0].name, color:'#111', line:true }]));
 
   const all = new Array(24).fill(0);
   series.forEach(x => x.data.forEach((v,h) => all[h] += v));
@@ -1734,6 +1928,504 @@ function drawT4c(N){
     { k:'預估尖峰時段', v: peakOf(all) },
     { k:'上週同星期總計', v: fmtInt(lw.total), u:'班' }
   ]);
+}
+
+/* ================================================================
+   頁籤 5 — 衍生貨量與貨運車流推估
+   ================================================================ */
+
+/**
+ * 貨機機型 → 設計最大酬載（噸／架）。實際推估貨量另乘 Load Factor。
+ * 此為機型設計容量而非實測值 —— TDX 不提供每班載貨量，本頁全部是推估。
+ */
+const FCAP = {
+  'B747-8F':130, 'B747-400':105, 'B777F':95, 'B777-200':75, 'A330-300':58,
+  'A330-200':60, 'B767-300':50, 'B757-200':35, 'B737-800':21, 'B737-400':18,
+  'B737-300':17
+};
+/**
+ * 機型代碼歸戶。clean 的 AcType 混用「族系-系列」與航司自訂的客製碼：
+ * B747-46N 實為 747-400、A330-243 / A330-223 實為 A330-200。
+ * 若用完全比對，這些變體會靜默落到預設值 —— B747-46N 會被當成 60 噸，少算四成。
+ *
+ * 順序有意義：B747-8 須先於 B747、B777F 須先於 B777-2 判定，
+ * 否則 747-8F 會被當成 -400、777F 會被當成 777-200。
+ */
+const FCAP_ALIAS = [
+  [/^B747-8/,            'B747-8F'],
+  [/^B747/,              'B747-400'],   // 含 B747-46N 與裸 B747：貨機以 -400 為代表
+  [/^B777F/,             'B777F'],
+  [/^B777-2/,            'B777-200'],
+  [/^B777/,              'B777F'],
+  [/^B767/,              'B767-300'],
+  [/^B757/,              'B757-200'],
+  [/^B737-8|^B737-MAX/,  'B737-800'],
+  [/^B737-4/,            'B737-400'],
+  [/^B737-3/,            'B737-300'],
+  [/^A330-3/,            'A330-300'],
+  [/^A330/,              'A330-200']
+];
+const FCAP_DEF = 60;                     // 歸不了戶時的預設值，並列於「機型歸戶檢查」
+
+/** 客機腹艙級別。同樣以前綴歸戶，歸不了戶者列入檢查表，不靜默當成窄體。 */
+const PAXCLS = [
+  [/^A380/,                                   'F'],
+  [/^(B777|B787|A350|B747)/,                  'E'],
+  [/^(A330|A340|A300|A310|B767)/,             'D'],
+  [/^(A318|A319|A32[01]|B73[7-9]|B717|E1[789]|E29|CRJ|AT[R7]|MD-[89])/, 'C']
+];
+const PAX_LEVELS = [
+  ['C', '窄體',   'A320 / A321 / B737',           'kC'],
+  ['D', '中寬體', 'A330 / B767',                  'kD'],
+  ['E', '大寬體', 'B777 / B787 / A350 / B747',    'kE'],
+  ['F', '超大',   'A380',                         'kF']
+];
+
+function fcapOf(ac){
+  const t = String(ac||'').toUpperCase();
+  if (FCAP[t] != null) return FCAP[t];
+  for (const [re, key] of FCAP_ALIAS) if (re.test(t)) return FCAP[key];
+  return null;                            // 未歸戶 → 呼叫端記錄後套 FCAP_DEF
+}
+function paxClsOf(ac){
+  const t = String(ac||'').toUpperCase();
+  for (const [re, c] of PAXCLS) if (re.test(t)) return c;
+  return null;                            // 未歸戶 → 呼叫端記錄後暫歸 C
+}
+
+/* 參數（皆為假設，可於「假設設定」調整） */
+const T5DEF = { mult:1, imp:0.70, exp:0.70, lag:3, truck:3,
+                lf:0.75, lfp:0.75, ramp:0.056, kC:2.5, kD:12, kE:18, kF:18 };
+const T5 = { sub:'day', kind:'frt', date:null, month:null, mkind:'all',
+             p:Object.assign({}, T5DEF) };
+
+const PARAMS = {
+  common: [
+    ['mult','情境倍率（全場放大）',0.8,1.5,0.05, v => v.toFixed(2)+'×'],
+    ['imp', '到站貨物進口佔比',    0.4,0.9,0.01, v => Math.round(v*100)+'%'],
+    ['exp', '離站貨物出口佔比',    0.4,0.9,0.01, v => Math.round(v*100)+'%'],
+    ['lag', '貨車進出倉作業時間',  1,  12, 1,    v => v+' hr'],
+    ['truck','每台車平均載貨量',   1,  10, 0.5,  v => v+' 噸']
+  ],
+  // 貨機與客機的裝載率並列一組，方便對照著調
+  lf: [
+    ['lf',  '貨機 Load Factor',    0.4,0.95,0.01, v => Math.round(v*100)+'%'],
+    ['lfp', '客機 Load Factor',    0.4,0.95,0.01, v => Math.round(v*100)+'%']
+  ],
+  pax: [
+    ['ramp','機下直轉比例',        0,  0.2, 0.001, v => (v*100).toFixed(1)+'%'],
+    ['kC',  'C 窄體 每班噸數',     0,  8,   0.5,   v => v+' 噸'],
+    ['kD',  'D 中寬體 每班噸數',   4,  25,  1,     v => v+' 噸'],
+    ['kE',  'E 大寬體 每班噸數',   8,  30,  1,     v => v+' 噸'],
+    ['kF',  'F 超大 每班噸數',     8,  30,  1,     v => v+' 噸']
+  ]
+};
+
+const z24 = () => new Array(24).fill(0);
+const h24 = fn => Array.from({length:24}, (_,h) => fn(h));
+const add24 = (a,b) => h24(h => a[h]+b[h]);
+
+/**
+ * 分時原始量（與假設無關，故可快取；滑桿變動只需重算 cargoOf 那一層）。
+ * 貨機累計「設計容量」與架次，客機累計「各級架次」。
+ */
+const T5RAW = new Map();
+const T5UNK = { frt:new Map(), pax:new Map() };      // 未歸戶機型 → 架次
+function blankRaw(){
+  return { fCapA:z24(), fCapD:z24(), fCntA:z24(), fCntD:z24(),
+           pA:{C:z24(),D:z24(),E:z24(),F:z24()}, pD:{C:z24(),D:z24(),E:z24(),F:z24()},
+           nFrt:0, nPax:0 };
+}
+const rawOf = d => T5RAW.get(d) || blankRaw();
+
+/** 全量單次掃描：建分時桶並同時盤點未歸戶機型。 */
+function buildRaw(){
+  T5RAW.clear(); T5UNK.frt.clear(); T5UNK.pax.clear();
+  const bump = (m,k) => m.set(k, (m.get(k)||0) + 1);
+  flown(DB.clean).forEach(r => {
+    if (!r.adate || r.ahour == null || r.ahour < 0 || r.ahour > 23) return;
+    let o = T5RAW.get(r.adate);
+    if (!o) { o = blankRaw(); T5RAW.set(r.adate, o); }
+    const h = r.ahour, isA = r.dir === 'ARR';
+    if (r.cargo){
+      o.nFrt++;
+      let cap = fcapOf(r.ac);
+      if (cap == null){ cap = FCAP_DEF; bump(T5UNK.frt, r.ac || '（AcType 從缺）'); }
+      if (isA){ o.fCapA[h] += cap; o.fCntA[h]++; } else { o.fCapD[h] += cap; o.fCntD[h]++; }
+    } else {
+      o.nPax++;
+      let cl = paxClsOf(r.ac);
+      if (cl == null){ cl = 'C'; bump(T5UNK.pax, r.ac || '（AcType 從缺）'); }
+      (isA ? o.pA : o.pD)[cl][h]++;
+    }
+  });
+}
+
+/** 套用假設後的分時機邊貨量（噸／hr）。 */
+function cargoOf(d){
+  const r = rawOf(d), P = T5.p;
+  // 機下直轉（ramp transfer）不進倉、不衍生車流，於此一次扣除 ——
+  // 統計卡與圖表都取用這裡的值，兩者才不會各算各的。
+  const belly = g => h24(h => (g.C[h]*P.kC + g.D[h]*P.kD + g.E[h]*P.kE + g.F[h]*P.kF)
+                              * P.lfp * (1 - P.ramp) * P.mult);
+  return {
+    fArr: r.fCapA.map(v => v * P.lf * P.mult),
+    fDep: r.fCapD.map(v => v * P.lf * P.mult),
+    pArr: belly(r.pA),
+    pDep: belly(r.pD)
+  };
+}
+
+/**
+ * 出入倉流量（噸／hr）。
+ *   出口進倉 ed：離站貨量 × 出口佔比，平均攤在起飛前 1～T 小時 → 尖峰早於離站
+ *   進口出倉 ip：到站貨量 × 進口佔比，平均攤在到站後 1～T 小時 → 尖峰晚於到站
+ * 佔比以外視為轉口，留在管制區內、不衍生聯外車流。
+ *
+ * 以「前一日＋當日＋次日」共 72 小時的序列推算再取中段。
+ * 若只在 24 格內用 %24 迴繞，01:00 離站班機的進倉車流會被捲回「同一天」的深夜，
+ * 22–24 時憑空多出車流，尖峰時段也可能因此被推到午夜 —— 那是計算方式的產物，不是真的。
+ */
+function flowOf(date, kind){
+  const P = T5.p, T = P.lag;
+  const seq = [addDays(date,-1), date, addDays(date,1)].map(cargoOf);
+  const arr = seq.flatMap(o => kind === 'frt' ? o.fArr : o.pArr);
+  const dep = seq.flatMap(o => kind === 'frt' ? o.fDep : o.pDep);
+  const ed = new Array(72).fill(0), ip = new Array(72).fill(0);
+  dep.forEach((v,t) => { if (!v) return; const w = v*P.exp/T;
+    for (let k=1; k<=T; k++){ const j = t-k; if (j >= 0) ed[j] += w; } });
+  arr.forEach((v,t) => { if (!v) return; const w = v*P.imp/T;
+    for (let k=1; k<=T; k++){ const j = t+k; if (j < 72) ip[j] += w; } });
+  return { ed: ed.slice(24,48), ip: ip.slice(24,48) };
+}
+
+/** 單日完整模型。kind：frt／pax／all */
+function modelOf(date, kind){
+  const c = cargoOf(date), r = rawOf(date), V = T5.p.truck;
+  const fF = flowOf(date,'frt'), pF = flowOf(date,'pax');
+  const pickA = kind === 'frt' ? c.fArr : kind === 'pax' ? c.pArr : add24(c.fArr, c.pArr);
+  const pickD = kind === 'frt' ? c.fDep : kind === 'pax' ? c.pDep : add24(c.fDep, c.pDep);
+  const ed = kind === 'frt' ? fF.ed : kind === 'pax' ? pF.ed : add24(fF.ed, pF.ed);
+  const ip = kind === 'frt' ? fF.ip : kind === 'pax' ? pF.ip : add24(fF.ip, pF.ip);
+  return {
+    arrTon:pickA, depTon:pickD, ed, ip,
+    frtTon: sum(c.fArr) + sum(c.fDep),
+    paxTon: sum(c.pArr) + sum(c.pDep),
+    edVeh: ed.map(v => v/V), ipVeh: ip.map(v => v/V),
+    frtVeh: add24(fF.ed, fF.ip).map(v => v/V),
+    paxVeh: add24(pF.ed, pF.ip).map(v => v/V),
+    veh: add24(ed, ip).map(v => v/V),
+    nFrt:r.nFrt, nPax:r.nPax,
+    nFlt: kind === 'frt' ? r.nFrt : kind === 'pax' ? r.nPax : r.nFrt + r.nPax
+  };
+}
+
+const T5KIND = [{v:'frt',label:'貨機'},{v:'pax',label:'客機'},{v:'all',label:'全場'}];
+const T5KNAME = { frt:'貨機', pax:'客機', all:'全場（貨機＋客機）' };
+const T5CARGONAME = { frt:'貨艙貨量', pax:'腹艙貨量', all:'貨艙＋腹艙貨量' };
+
+/** 機邊貨量序列（到站／離站），兩個檢視共用 */
+const tonSeries = m => resolveColors([
+  { name:'到站卸機貨量', color:'var(--arr)', data:m.arrTon.map(v => Math.round(v)) },
+  { name:'離站裝機貨量', color:'var(--dep)', data:m.depTon.map(v => Math.round(v)) }
+]);
+/**
+ * 車輛圖的兩個組成。全場檢視看貨機／客機（哪一邊主導車流），
+ * 單一類別檢視看出口／進口。圖說由呼叫端依同一判斷產生，不會對不上。
+ */
+const vehParts = (m, kind) => kind === 'all'
+  ? [ { name:'貨機衍生車輛', color:'var(--dep)', data:m.frtVeh },
+      { name:'客機衍生車輛', color:'var(--arr)', data:m.paxVeh } ]
+  : [ { name:'出口車輛', color:'var(--dep)', data:m.edVeh },
+      { name:'進口車輛', color:'var(--arr)', data:m.ipVeh } ];
+
+/**
+ * 車輛圖：兩個組成各自一條折線，合計為長條。每日與每月兩處共用。
+ * 長條取兩條線「四捨五入後」的和 —— 若各自獨立取整，圖上的合計會與兩線相加差 1，
+ * 讀者對不起來。
+ */
+function vehChart(chartHost, legendHost, m, kind, height){
+  const parts = resolveColors(vehParts(m, kind));
+  const lines = parts.map(p => ({ name:p.name, color:p.color, data:p.data.map(v => Math.round(v)) }));
+  const bars  = [{ name:'合計車輛數', color:'#cbd5e1',
+                   data: h24(h => lines[0].data[h] + lines[1].data[h]) }];
+  barChart(chartHost, { cats:HOURS, series:bars, lines, showValues:true, height,
+                        yTitle:'台/hr', xTitle:'時間（時）' });
+  legend(legendHost, bars.map(b => ({ name:b.name, color:b.color }))
+    .concat(lines.map(l => ({ name:l.name, color:l.color, line:true }))));
+}
+
+/** 重繪前先把容器內的舊圖表移出重繪登記表，避免 REG 無限累積 */
+function dropHosts(root){
+  [...REG].forEach(h => { if (!h.isConnected || root.contains(h)) REG.delete(h); });
+}
+
+function initT5(){
+  buildRaw();
+
+  seg($('#t5-sub'), [{v:'day',label:'每日推估'},{v:'mon',label:'每月尖峰摘要'},{v:'cfg',label:'假設設定'}],
+      ()=>T5.sub, v => {
+        T5.sub = v; segSync($('#t5-sub'), v);
+        $('#t5-day').hidden = v !== 'day';
+        $('#t5-mon').hidden = v !== 'mon';
+        $('#t5-cfg').hidden = v !== 'cfg';
+        if (v === 'mon') drawT5Month();
+        // 隱藏容器的 clientWidth 為 0，切過來才量得到寬度
+        REG.forEach(h => { if (h.isConnected && h.offsetParent) redraw(h); });
+      });
+
+  const ds = $('#t5-date');
+  ds.innerHTML = DB.dates.slice().reverse().map(d =>
+    `<option value="${d}">${md(d)}（${WD[dowOf(d)]}）${evMark(d)}</option>`).join('');
+  T5.date = DB.dates[DB.dates.length-1];
+  ds.value = T5.date;
+  ds.onchange = () => { T5.date = ds.value; drawT5Day(); };
+
+  seg($('#t5-kind'), T5KIND, ()=>T5.kind,
+      v => { T5.kind = v; segSync($('#t5-kind'), v); drawT5Day(); });
+  seg($('#t5m-kind'), T5KIND, ()=>T5.mkind,
+      v => { T5.mkind = v; segSync($('#t5m-kind'), v); drawT5Month(); });
+
+  const ms = $('#t5-month');
+  ms.innerHTML = DB.months.map(m =>
+    `<option value="${m}">${m.slice(0,4)} 年 ${+m.slice(5,7)} 月</option>`).join('');
+  T5.month = DB.months[0] || null;
+  ms.value = T5.month;
+  ms.onchange = () => { T5.month = ms.value; drawT5Month(); };
+
+  renderParams();
+  renderRefTables();
+  renderMethod();
+  drawT5Day();
+}
+
+/* ---------------- 假設設定 ---------------- */
+function renderParams(){
+  const build = (host, defs) => {
+    host.innerHTML = '';
+    defs.forEach(([k, lab, mn, mx, st, fmt]) => {
+      const d = document.createElement('div');
+      d.className = 'sl';
+      d.innerHTML = `<label>${esc(lab)}<b id="t5lb-${k}">${fmt(T5.p[k])}</b></label>
+        <input type="range" min="${mn}" max="${mx}" step="${st}" value="${T5.p[k]}" id="t5in-${k}"
+               aria-label="${esc(lab)}">`;
+      host.appendChild(d);
+      $('input', d).oninput = e => {
+        T5.p[k] = parseFloat(e.target.value);
+        $('#t5lb-'+k).textContent = fmt(T5.p[k]);
+        if (k[0] === 'k' || k === 'lf' || k === 'lfp') renderRefTables();
+        drawT5Day();
+        if (T5.sub === 'mon') drawT5Month();
+      };
+    });
+  };
+  build($('#t5-p-common'), PARAMS.common);
+  build($('#t5-p-lf'),     PARAMS.lf);
+  build($('#t5-p-pax'),    PARAMS.pax);
+  $('#t5-reset').onclick = () => {
+    Object.assign(T5.p, T5DEF);
+    renderParams(); renderRefTables(); drawT5Day();
+    if (T5.sub === 'mon') drawT5Month();
+  };
+}
+
+function renderRefTables(){
+  const ks = Object.keys(FCAP);
+  $('#t5-frt-tbl').innerHTML =
+    '<table class="tbl"><thead><tr><th class="l">機型</th><th>設計容量</th>' +
+    '<th class="l">機型</th><th>設計容量</th></tr></thead><tbody>' +
+    Array.from({length:Math.ceil(ks.length/2)}, (_,i) => {
+      const a = ks[i*2], b = ks[i*2+1];
+      return `<tr><td class="l">${esc(a)}</td><td>${FCAP[a]} 噸</td>` +
+             (b ? `<td class="l">${esc(b)}</td><td>${FCAP[b]} 噸</td>` : '<td></td><td></td>') + '</tr>';
+    }).join('') + '</tbody></table>';
+
+  $('#t5-pax-tbl').innerHTML =
+    '<table class="tbl"><thead><tr><th class="l">級別</th><th class="l">代表機型</th>' +
+    '<th>滿載腹艙</th><th>實際採用</th></tr></thead><tbody>' +
+    PAX_LEVELS.map(([c, name, ex, k]) =>
+      `<tr><td class="l">${c}　${name}</td><td class="l">${esc(ex)}</td>
+        <td>${T5.p[k]} 噸/班</td>
+        <td><b>${(T5.p[k] * T5.p.lfp).toFixed(1)}</b> 噸/班</td></tr>`).join('') +
+    '</tbody></table>' +
+    `<p class="chint" style="margin-top:7px">實際採用＝滿載腹艙 × 客機 Load Factor
+      （目前 ${Math.round(T5.p.lfp*100)}%）。機下直轉另於計算時扣除。</p>`;
+
+  const row = (m, kind, unit) => {
+    if (!m.size) return `<p class="chint">${kind}：全部機型皆已歸戶。</p>`;
+    const items = [...m.entries()].sort((a,b) => b[1]-a[1]);
+    const tot = items.reduce((s,x) => s+x[1], 0);
+    return `<p class="chint" style="margin-bottom:6px"><b>${kind}</b>：${items.length} 種機型、
+      共 ${fmtInt(tot)} 架次未歸戶，以預設值 ${unit} 計算。</p>
+      <table class="tbl"><thead><tr><th class="l">AcType</th><th>架次</th></tr></thead><tbody>` +
+      items.map(([k,v]) => `<tr><td class="l">${esc(k)}</td><td>${fmtInt(v)}</td></tr>`).join('') +
+      '</tbody></table>';
+  };
+  $('#t5-unknown').innerHTML =
+    row(T5UNK.frt, '貨機', FCAP_DEF + ' 噸/架') +
+    '<div style="height:12px"></div>' +
+    row(T5UNK.pax, '客機', 'C 級（窄體）');
+}
+
+function renderMethod(){
+  $('#t5-method').innerHTML = `
+    <ul style="margin:0 0 0 17px;line-height:1.8;font-size:16px;color:var(--ink2)">
+      <li><b>母體</b>：<code>status = flown</code>，以 <code>actual_date</code> /
+        <code>actual_hour</code> 分桶，與頁籤 1 的架次統計同一套規則。
+        取消與改期的班次沒有實際起降，不產生貨量。</li>
+      <li><b>貨機貨量</b>＝機型設計容量 × Load Factor × 情境倍率。</li>
+      <li><b>客機腹艙貨量</b>＝各級架次 × 每級滿載噸數 × 客機 Load Factor
+        ×（1 − 機下直轉比例）× 情境倍率。</li>
+      <li><b>出口進倉</b>＝離站貨量 × 出口佔比，攤於起飛前 1～T 小時；
+        <b>進口出倉</b>＝到站貨量 × 進口佔比，攤於到站後 1～T 小時。
+        佔比以外視為轉口，留在管制區內、不衍生聯外車流。</li>
+      <li><b>貨車數</b>＝出入倉貨量 ÷ 每台車平均載貨量。形狀與貨量圖相同，只換算單位。</li>
+    </ul>
+    <p class="cnote" style="margin-top:11px"><b>已知限制</b></p>
+    <ul style="margin:4px 0 0 17px;line-height:1.8;font-size:15px;color:var(--ink3)">
+      <li>無實際載貨量可校驗，全部係數為假設值；客機腹艙尤其無實測依據。</li>
+      <li>作業時間 T 為單一均勻分布。實務上出口收貨截止常在起飛前更久，
+        進口提貨受通關時程影響可長達數日 —— 本模型等同假設貨車緊貼班機。</li>
+      <li>「機邊處理貨量」為到站與離站相加，<b>轉口貨會被計入兩次</b>（卸機一次、裝機一次）。
+        作為機場處理噸數是對的，不可讀成「進出機場的貨物淨量」。</li>
+      <li>跨日車流取前後日資料推算。若相鄰日不在資料範圍內（如首日的前一日），
+        該側的邊界時段會偏低。</li>
+    </ul>`;
+}
+
+/* ---------------- 每日推估 ---------------- */
+function drawT5Day(){
+  const d = T5.date, kind = T5.kind, m = modelOf(d, kind);
+  const V = T5.p.truck, kn = T5KNAME[kind];
+
+  const totTon = sum(m.arrTon) + sum(m.depTon);
+  const totIO  = sum(m.ed) + sum(m.ip);
+
+  // 事件照實標記，不調整數值 —— 與頁籤 1 同一套處理
+  const ev = evOf(d);
+  // 全日無起降卻仍有車流，是跨日攤提的正確結果（前一日晚間到站的進口貨仍要提、
+  // 次日凌晨離站的出口貨已先進倉）。不解釋的話會被當成算錯。
+  const spill = m.nFlt === 0 && totIO > 0;
+  $('#t5-evt').innerHTML =
+    (ev ? `<div class="banner warn"><span>⚠</span><div><b>${esc(ev.cat)}</b>　${esc(ev.desc)}
+        　<span class="tag">${ {all:'排除於常態統計', unres:'僅排除取消或改期統計',
+                                none:'僅標記，不排除'}[ev.mode] }</span>
+        <div style="margin-top:5px">本頁照實呈現當日推估值，不因事件調整。</div></div></div>` : '') +
+    (spill ? `<div class="banner info"><span>ℹ️</span><div>
+        <b>當日無任何${kind === 'all' ? '' : kn}實際起降，車流卻不為零 —— 這是正確的。</b>
+        圖上的車流全部來自跨日作業：前一日晚間到站的進口貨仍須提領，
+        次日凌晨離站的出口貨已先行進倉。</div></div>` : '');
+  // 尖峰時段與尖峰量取自同一組（四捨五入後的）數字，否則兩張卡可能互相矛盾
+  const vehR = m.veh.map(v => Math.round(v));
+  // 貨機／客機檢視只看該類別的量體；車流面的彙總留在全場檢視，避免分項相加又對不上全場
+  $('#t5-kpi').className = 'kpis ' + (kind === 'all' ? 'k3' : 'k2');
+  kpis($('#t5-kpi'), kind === 'all' ? [
+    { k:'當日班次合計',     v:fmtInt(m.nFlt),  u:'班' },
+    { k:'航班衍生貨量推估', v:fmtInt(totTon),  u:'噸' },
+    { k:'貨機貨量佔比',     v:fmtPct(totTon ? m.frtTon/totTon*100 : null) },
+    { k:'衍生貨車總數',     v:fmtInt(totIO/V), u:'台' },
+    { k:'車流尖峰時段',     v:peakOf(vehR) },
+    { k:'尖峰時段車輛數',   v:fmtInt(Math.max(...vehR)), u:'台/hr' }
+  ] : [
+    { k:'當日班次合計',     v:fmtInt(m.nFlt), u:'班' },
+    { k:'航班衍生貨量推估', v:fmtInt(totTon), u:'噸' }
+  ]);
+
+  // 5-1 航班貨量：到站卸機 / 離站裝機
+  const s1 = tonSeries(m);
+  $('#t5a-tag').textContent = kn;
+  $('#t5a-hint').textContent =
+    '以班機實際起降時間呈現的機邊貨量，' + T5CARGONAME[kind] + '，未計貨車搬運時間。';
+  barChart($('#t5a-chart'), { cats:HOURS, series:s1, height:280,
+                              yTitle:'噸/hr', xTitle:'時間（時）' });
+  legend($('#t5a-legend'), s1.map(s => ({ name:s.name, color:s.color })));
+  $('#t5a-note').innerHTML =
+    '長條高度為兩者堆疊後的機邊處理總量。<b>轉口貨在到站與離站各計一次</b>，' +
+    '故此圖不可讀成進出機場的貨物淨量。';
+
+  // 5-2 出入倉貨量：出口領先離站、進口落後到站
+  const s2 = resolveColors([
+    { name:'出口進倉', color:'var(--dep)', data:m.ed.map(v => Math.round(v)) },
+    { name:'進口出倉', color:'var(--arr)', data:m.ip.map(v => Math.round(v)) }
+  ]);
+  $('#t5b-tag').textContent = kn;
+  $('#t5b-hint').innerHTML =
+    `取上圖貨量中的進出口部分（出口 ${Math.round(T5.p.exp*100)}%、` +
+    `進口 ${Math.round(T5.p.imp*100)}%），套用 ${T5.p.lag} 小時貨車作業時間後的倉庫端流量。`;
+  barChart($('#t5b-chart'), { cats:HOURS, series:s2, height:280,
+                              yTitle:'噸/hr', xTitle:'時間（時）' });
+  legend($('#t5b-legend'), s2.map(s => ({ name:s.name, color:s.color })));
+  $('#t5b-note').textContent =
+    '出口進倉的尖峰早於離站尖峰，進口出倉的尖峰晚於到站尖峰。'
+    + '跨日部分取前後日資料推算，不迴繞至同一日。';
+
+  // 5-3 衍生貨車：兩條組成折線＋合計長條
+  $('#t5c-tag').textContent = kn;
+  vehChart($('#t5c-chart'), $('#t5c-legend'), m, kind, 280);
+  $('#t5c-hint').textContent = kind === 'all'
+    ? `出入倉貨量 ÷ 每台車 ${V} 噸。兩條折線為貨機、客機各自的衍生車輛數，長條為兩者合計。`
+    : `出入倉貨量 ÷ 每台車 ${V} 噸。兩條折線為出口、進口各自的車輛數，長條為兩者合計。`
+      + '形狀與上圖相同，僅換算為車輛數。';
+  $('#t5c-note').textContent =
+    '每台車平均載貨量為假設值，車輛數與貨量為同一組數字的兩種單位，不是獨立估計。';
+}
+
+/* ---------------- 每月尖峰摘要 ---------------- */
+/**
+ * 當月架次最多的平日／假日各一天。
+ * 排除事件表標記「排除於常態統計」的日期 —— 那些日子的架次來自中斷，不代表尖峰。
+ */
+function peakDay(days, weekend){
+  const pool = days.filter(d => {
+    const w = dowOf(d);
+    return (weekend ? (w === 0 || w === 6) : (w >= 1 && w <= 5)) && !isExcl(d);
+  });
+  if (!pool.length) return null;
+  const cnt = d => { const r = rawOf(d); return r.nFrt + r.nPax; };
+  return pool.reduce((a,b) => cnt(b) > cnt(a) ? b : a);
+}
+
+function drawT5Month(){
+  const body = $('#t5-mon-body');
+  dropHosts(body);
+  const days = DB.dates.filter(d => d.startsWith(T5.month));
+  const kind = T5.mkind, kn = T5KNAME[kind], V = T5.p.truck;
+
+  const blocks = [['平日尖峰日', peakDay(days,false), 'wd'],
+                  ['假日尖峰日', peakDay(days,true),  'we']];
+  body.innerHTML = blocks.map(([title, d, pfx]) => d ? `
+    <div class="card mfeat">
+      <div class="mhead"><h3>${title}</h3>
+        <span class="tag">${md(d)}（${WD[dowOf(d)]}）${evMark(d)}</span></div>
+      <div class="kpis" id="t5m-${pfx}-kpi" style="margin-bottom:12px"></div>
+      <div class="ctitle"><h3 style="font-size:16px">航班貨量</h3></div>
+      <div class="legend" id="t5m-${pfx}-l1"></div>
+      <div class="chart" id="t5m-${pfx}-c1"></div>
+      <div class="ctitle" style="margin-top:14px"><h3 style="font-size:16px">衍生貨車數</h3></div>
+      <div class="legend" id="t5m-${pfx}-l2"></div>
+      <div class="chart" id="t5m-${pfx}-c2"></div>
+    </div>` : `
+    <div class="card mfeat">
+      <div class="mhead"><h3>${title}</h3></div>
+      <div class="empty">當月無可用的${title.slice(0,2)}資料</div>
+    </div>`).join('');
+
+  blocks.forEach(([, d, pfx]) => {
+    if (!d) return;
+    const m = modelOf(d, kind);
+    const totTon = sum(m.arrTon) + sum(m.depTon), totIO = sum(m.ed) + sum(m.ip);
+    kpis($(`#t5m-${pfx}-kpi`), [
+      { k:'當日班次合計',     v:fmtInt(m.nFlt),  u:'班' },
+      { k:'航班衍生貨量推估', v:fmtInt(totTon),  u:'噸' },
+      { k:'衍生貨車總數',     v:fmtInt(totIO/V), u:'台' },
+      { k:'車流尖峰時段',     v:peakOf(m.veh.map(v => Math.round(v))) }
+    ]);
+    const s1 = tonSeries(m);
+    barChart($(`#t5m-${pfx}-c1`), { cats:HOURS, series:s1, height:250,
+                                    yTitle:'噸/hr', xTitle:'時間（時）' });
+    legend($(`#t5m-${pfx}-l1`), s1.map(s => ({ name:s.name, color:s.color })));
+    vehChart($(`#t5m-${pfx}-c2`), $(`#t5m-${pfx}-l2`), m, kind, 250);
+  });
 }
 
 /* ================================================================
@@ -1791,19 +2483,43 @@ async function boot(){
     $('#t5-gaps').innerHTML = '<b>已知資料缺口</b><ul style="margin:6px 0 0 16px;line-height:1.75">' +
       CFG.gaps.map(g => `<li style="margin-bottom:5px">${g}</li>`).join('') + '</ul>';
 
-    initT1(); initT2(); drawT3(); initT4();
+    initT1(); initT2(); initT6(); drawT3(); initT4(); initT5();
+
+    // 目錄：由頁籤列產生，兩者永遠一致（新增頁籤不必再改一份清單）
+    const menu = $('#menu'), menuBtn = $('#menubtn');
+    menu.innerHTML = $$('#nav button')
+      .map(b => `<button data-tab="${b.dataset.tab}">${esc(b.textContent)}</button>`).join('');
+    let scrim = null;
+    const closeMenu = () => {
+      menu.hidden = true;
+      menuBtn.setAttribute('aria-expanded', 'false');
+      if (scrim) { scrim.remove(); scrim = null; }
+    };
+    const openMenu = () => {
+      menu.hidden = false;
+      menuBtn.setAttribute('aria-expanded', 'true');
+      scrim = document.createElement('div');
+      scrim.className = 'menu-scrim';
+      scrim.onclick = closeMenu;
+      document.body.appendChild(scrim);
+    };
+    menuBtn.onclick = () => menu.hidden ? openMenu() : closeMenu();
+    addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
     // 頁籤切換（支援 #t3 深層連結，可直接把某頁加入書籤）
     const go = (id, push) => {
       if (!$('#'+id)) id = 't1';
       $$('#nav button').forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === id)));
+      $$('#menu button').forEach(x => x.setAttribute('aria-current', String(x.dataset.tab === id)));
       $$('.panel').forEach(p => p.classList.toggle('on', p.id === id));
       // 切到才重繪：隱藏容器 clientWidth 為 0，尺寸會算錯
       REG.forEach(h => { if (h.isConnected && h.offsetParent) redraw(h); });
       if (push) history.replaceState(null, '', '#' + id);
+      closeMenu();
       scrollTo({ top:0, behavior:'instant' });
     };
     $$('#nav button').forEach(b => b.onclick = () => go(b.dataset.tab, true));
+    $$('#menu button').forEach(b => b.onclick = () => go(b.dataset.tab, true));
     addEventListener('hashchange', () => go(location.hash.slice(1), false));
     go(location.hash.slice(1) || 't4', false);        // 預設落在「每日航班預報」
   } catch(err){
