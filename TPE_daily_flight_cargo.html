@@ -12,25 +12,30 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Noto Sans TC",sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
 .mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
-header{background:var(--navy);color:#fff;padding:22px 20px 0}
+header{background:var(--navy);color:#fff;padding:22px 20px 16px}
 .head-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;max-width:1180px;margin:0 auto}
 .brand h1{font-family:"Space Grotesk";font-weight:600;font-size:21px;letter-spacing:.3px}
-.brand .sub{font-size:12px;color:#9db3c9;margin-top:3px}
+.brand .sub{font-size:14px;color:#9db3c9;margin-top:3px}
 .head-stats{display:flex;gap:22px;text-align:right}
 .head-stats .n{font-family:"IBM Plex Mono";font-size:19px;font-weight:600;color:var(--amber-lt)}
-.head-stats .l{font-size:12px;color:#9db3c9}
-.navrow{max-width:1180px;margin:16px auto 0;display:flex;align-items:flex-end;gap:8px;position:relative}
+.head-stats .l{font-size:14px;color:#9db3c9}
+/* 只把分頁列釘在頂端（不含標題／統計數字），長頁面捲到底仍可直接換頁籤，
+   又不會像整個 header 固定那樣在手機上吃掉近四分之一畫面。 */
+.navbar{position:sticky;top:0;z-index:50;background:var(--navy);padding:0 20px;box-shadow:0 2px 10px rgba(14,42,71,.18)}
+/* 分頁列固定後，捲動定位的目標若貼齊視窗頂端會被它蓋住，預留其高度。 */
+.card,section.panel{scroll-margin-top:60px}
+.navrow{max-width:1180px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;position:relative}
 nav.tabs{flex:1;min-width:0;display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 nav.tabs::-webkit-scrollbar{display:none}
 /* 手機上分頁列需橫向捲動、容易漏看後面的分頁，故固定一個目錄鈕列出全部分頁。 */
-.menubtn{flex-shrink:0;margin-bottom:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:7px;padding:7px 12px;font-family:"Noto Sans TC";font-size:13px;cursor:pointer;white-space:nowrap}
+.menubtn{flex-shrink:0;margin-bottom:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:7px;padding:7px 12px;font-family:"Noto Sans TC";font-size:14px;cursor:pointer;white-space:nowrap}
 .menubtn:hover{background:rgba(255,255,255,.2)}
 .menupanel{display:none;position:absolute;right:0;top:100%;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(14,42,71,.22);padding:8px;min-width:220px;max-width:min(320px,90vw)}
 .menupanel.open{display:block}
 .menupanel button{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 12px;font-family:"Noto Sans TC";font-size:14px;color:var(--ink);cursor:pointer;border-radius:6px;white-space:nowrap}
 .menupanel button:hover{background:#f2ede2}
 .menupanel button.cur{background:var(--navy);color:#fff;font-weight:600}
-nav.tabs button{background:transparent;border:none;color:#9db3c9;font-family:"Noto Sans TC";font-size:13.5px;font-weight:500;padding:12px 16px;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;flex-shrink:0}
+nav.tabs button{background:transparent;border:none;color:#9db3c9;font-family:"Noto Sans TC";font-size:14px;font-weight:500;padding:12px 16px;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;flex-shrink:0}
 nav.tabs button:hover{color:#fff}
 nav.tabs button.active{color:#fff;border-bottom-color:var(--amber)}
 main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
@@ -42,80 +47,74 @@ main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
 @media(min-width:600px){.card{padding:20px 22px}}
 .card h2{font-family:"Space Grotesk";font-size:15.5px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .fc-title{font-size:19px;font-weight:700;color:var(--navy)}
-.fc-date{font-size:13px;color:var(--muted);font-weight:500}
-.card .desc{font-size:12.5px;color:var(--muted);margin:6px 0 16px;max-width:74ch}
-.warn{background:#fbeae8;border:1px solid #e6b0aa;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#8a3129;margin-bottom:16px;display:flex;gap:8px;align-items:center}
-.err-banner{background:#fbeae8;border:1px solid #e6b0aa;color:#8a3129;padding:14px 18px;margin:16px auto;max-width:1180px;border-radius:8px;font-size:13px;display:none}
+.fc-date{font-size:14px;color:var(--muted);font-weight:500}
+.card .desc{font-size:14px;color:var(--muted);margin:6px 0 16px;max-width:74ch}
+.warn{background:#fbeae8;border:1px solid #e6b0aa;border-radius:8px;padding:10px 14px;font-size:14px;color:#8a3129;margin-bottom:16px;display:flex;gap:8px;align-items:center}
+.err-banner{background:#fbeae8;border:1px solid #e6b0aa;color:#8a3129;padding:14px 18px;margin:16px auto;max-width:1180px;border-radius:8px;font-size:14px;display:none}
 .loading-overlay{position:fixed;inset:0;background:rgba(245,242,234,.94);display:flex;align-items:center;justify-content:center;z-index:999;font-family:"Space Grotesk";color:var(--navy);font-size:15px;flex-direction:column;gap:10px}
 .loading-overlay .dot{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--amber);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ctrls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-select{padding:7px 12px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;font-family:"Noto Sans TC";font-size:13px;max-width:100%}
+select{padding:7px 12px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;font-family:"Noto Sans TC";font-size:14px;max-width:100%}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-.seg button{border:none;background:#fff;padding:7px 13px;cursor:pointer;color:var(--muted);font-size:12.5px;border-right:1px solid var(--line);font-family:"Noto Sans TC"}
+.seg button{border:none;background:#fff;padding:7px 13px;cursor:pointer;color:var(--muted);font-size:14px;border-right:1px solid var(--line);font-family:"Noto Sans TC"}
 .seg button:last-child{border-right:none}
 .seg button.on{background:var(--navy);color:#fff}
-.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend{display:flex;gap:14px;font-size:14px;color:var(--muted);flex-wrap:wrap}
 .legend span{display:flex;align-items:center;gap:5px}
 .legend i{width:11px;height:11px;border-radius:2px;display:inline-block;flex-shrink:0}
 .chart-wrap{position:relative;width:100%;height:320px}
 .chart-sm{height:280px}
-.comprow{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;align-items:center}
-@media(max-width:820px){.comprow{grid-template-columns:1fr}}
+/* 航點類圓餅一側可達 8–9 個標籤，每列需 36px；280px 放不下會被擠在一起，故加高。 */
+.chart-pie{height:330px}
 .comprow2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 @media(max-width:820px){.comprow2{grid-template-columns:1fr}}
+/* 同列卡片等高對齊；圖表維持固定高度（交給 flex 拉伸會讓 Chart.js 量到錯的尺寸），
+   改用 margin:auto 讓它在剩餘空間垂直置中。 */
+.comprow2>.card{display:flex;flex-direction:column}
+.comprow2>.card>.chart-wrap{margin-top:auto;margin-bottom:auto}
 .barbox{max-height:232px;overflow-y:auto;overflow-x:hidden;padding-right:4px}
 .barbox::-webkit-scrollbar{width:7px}.barbox::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 .barinner{position:relative;width:100%}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
-.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .l{font-size:14px;color:var(--muted)}
 .kpi .n{font-family:"IBM Plex Mono";font-size:24px;font-weight:600;margin-top:4px}
-.kpi .u{font-size:12.5px;color:var(--muted);font-weight:400}
+.kpi .u{font-size:14px;color:var(--muted);font-weight:400}
 .kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .kpi-row .kpi{flex:1;min-width:118px}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
 .tblwrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
-th{font-weight:600;color:var(--muted);font-size:12px}
+th{font-weight:600;color:var(--muted);font-size:14px}
 tbody tr:hover{background:#faf7ef}
 td.mono{font-family:"IBM Plex Mono"}
-.tag{font-family:"IBM Plex Mono";font-size:12px;background:var(--navy);color:#fff;padding:3px 8px;border-radius:4px;display:inline-block;margin:2px 4px 2px 0}
-.tag.alt{background:var(--teal);cursor:pointer;border:2px solid transparent}
-.tag.alt.sel{outline:2px solid var(--amber);outline-offset:1px}
 .delaykpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:8px}
 .delaykpi-card{border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.delaykpi-head{padding:10px 14px;font-weight:600;font-size:13px}
+.delaykpi-head{padding:10px 14px;font-weight:600;font-size:14px}
 .delaykpi-head.normal{background:#e6f0f8;color:#1c4e7a}
 .delaykpi-head.all{background:#fbeee0;color:#9c5a1f}
 .delaykpi-group{padding:10px 14px;border-top:1px solid var(--line)}
-.delaykpi-glabel{font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
-.delaykpi-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.delaykpi-glabel{font-size:14px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.delaykpi-row{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
 .delaykpi-row b{font-family:"IBM Plex Mono";font-weight:600}
 #t4table th,#t4table td{text-align:center}
-.taglist{max-height:210px;overflow-y:auto;padding-right:2px}
-.hm{border-collapse:separate;border-spacing:2px 1px;width:100%;font-size:12px;table-layout:fixed}
-.hm th{font-weight:500;color:var(--muted);padding:2px 3px;text-align:center;font-size:12px;width:12%}
+.hm{border-collapse:separate;border-spacing:2px 1px;width:100%;font-size:14px;table-layout:fixed}
+.hm th{font-weight:500;color:var(--muted);padding:2px 3px;text-align:center;font-size:14px;width:12%}
+/* 熱力圖表頭的日期是 7 欄並排的密集副標，14px 在手機上會相鄰重疊（08-1008-11），維持 12px。 */
 .hm th .dt{font-family:"IBM Plex Mono";font-size:12px;color:#a99;display:block;font-weight:400}
-.hm td.hr{color:var(--muted);font-family:"IBM Plex Mono";text-align:right;padding-right:6px;width:30px;border:none;padding-top:0;padding-bottom:0;font-size:12px}
-.hm td.cell{text-align:center;color:#fff;font-family:"IBM Plex Mono";border-radius:0;height:23px;font-size:12px;border:none;padding:0}
-.heatlegend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:12px;flex-wrap:wrap}
+.hm td.hr{color:var(--muted);font-family:"IBM Plex Mono";text-align:right;padding-right:6px;width:30px;border:none;padding-top:0;padding-bottom:0;font-size:14px}
+.hm td.cell{text-align:center;color:#fff;font-family:"IBM Plex Mono";border-radius:0;height:23px;font-size:14px;border:none;padding:0}
+.heatlegend{display:flex;gap:14px;font-size:14px;color:var(--muted);margin-top:12px;flex-wrap:wrap}
 .heatlegend span{display:flex;align-items:center;gap:5px}.heatlegend i{width:13px;height:13px;border-radius:0;display:inline-block}
-.empty-state{background:repeating-linear-gradient(135deg,#f1ecdf,#f1ecdf 10px,#ece5d3 10px,#ece5d3 20px);border:1.5px dashed var(--line);border-radius:8px;padding:24px 20px;text-align:left}
-.empty-state .tag2{font-family:"IBM Plex Mono";font-size:12px;color:var(--amber);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;font-weight:700}
-.empty-state .msg{font-size:13.5px;color:var(--muted);line-height:1.7;max-width:640px}
-.progress-track{width:180px;height:6px;background:var(--line);border-radius:3px;margin-top:12px;overflow:hidden}
-.progress-fill{height:100%;background:var(--amber)}
-.progress-label{font-family:"IBM Plex Mono";font-size:12px;color:var(--muted);margin-top:6px}
-.badge2{font-family:"IBM Plex Mono";font-size:12px;color:var(--amber);border:1px solid var(--amber);border-radius:4px;padding:1px 7px;font-weight:600}
+.badge2{font-family:"IBM Plex Mono";font-size:14px;color:var(--amber);border:1px solid var(--amber);border-radius:4px;padding:1px 7px;font-weight:600}
 .badge2.warn{color:var(--red);border-color:var(--red)}
 .badge2.muted{color:var(--muted);border-color:var(--line)}
 .d5grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 18px}
-.sl label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}
+.sl label{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-bottom:4px}
 .sl label b{color:var(--ink);font-family:"IBM Plex Mono";font-weight:600}
 .sl input{width:100%}
-.chart-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+.chart-note{font-size:14px;color:var(--muted);margin-top:10px;line-height:1.6}
 .banner3{display:flex;flex-wrap:wrap;gap:18px;align-items:baseline;padding:14px 16px;background:var(--navy);border-radius:8px;color:#fff}
 </style>
 </head>
@@ -131,6 +130,8 @@ td.mono{font-family:"IBM Plex Mono"}
       <div><div class="n mono" id="hsPax">–</div><div class="l">客機架次</div></div>
     </div>
   </div>
+</header>
+<div class="navbar">
   <div class="navrow">
     <nav class="tabs" id="tabs">
       <button class="active" data-t="p4">每日航班預報</button>
@@ -143,7 +144,7 @@ td.mono{font-family:"IBM Plex Mono"}
     <button class="menubtn" id="menuBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="menuPanel">☰ 目錄</button>
     <div class="menupanel" id="menuPanel" role="menu" aria-labelledby="menuBtn"></div>
   </div>
-</header>
+</div>
 <main id="mainContent" style="display:none">
 
 <section class="panel active" id="p4">
@@ -206,8 +207,8 @@ td.mono{font-family:"IBM Plex Mono"}
     <p class="desc">選特定週次（與上圖連動），看該週星期 × 時段的真實架次密度。無航班的格子顯示 0、不塗色；分級標準見圖例。</p>
     <div class="ctrls"><div class="seg" id="t1hcat"><button data-v="cargo" class="on">貨運</button><button data-v="pax">客運</button></div></div>
     <div class="comprow2" style="align-items:start">
-      <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">起飛 DEP</div><div id="t1heat_DEP"></div></div>
-      <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">降落 ARR</div><div id="t1heat_ARR"></div></div>
+      <div><div style="font-size:14px;color:var(--muted);margin-bottom:8px;font-weight:500">起飛 DEP</div><div id="t1heat_DEP"></div></div>
+      <div><div style="font-size:14px;color:var(--muted);margin-bottom:8px;font-weight:500">降落 ARR</div><div id="t1heat_ARR"></div></div>
     </div>
     <div class="heatlegend" id="t1heatlegend"></div>
   </div>
@@ -219,21 +220,21 @@ td.mono{font-family:"IBM Plex Mono"}
   <div class="ctrls" style="margin-bottom:10px">
     <div class="seg" id="t2catsel"><button data-v="cargo" class="on">貨機</button><button data-v="pax">客機</button></div>
   </div>
-  <div class="comprow2" style="align-items:start">
-    <div class="card"><h2>航空公司組成</h2><div class="chart-wrap chart-sm"><canvas id="p_airline"></canvas></div></div>
-    <div class="card"><h2>機型組成</h2><div class="chart-wrap chart-sm"><canvas id="p_actype"></canvas></div></div>
-    <div class="card"><h2>目的地分佈（起飛）</h2><div class="chart-wrap chart-sm"><canvas id="p_dest"></canvas></div></div>
-    <div class="card"><h2>來源地分佈（降落）</h2><div class="chart-wrap chart-sm"><canvas id="p_origin"></canvas></div></div>
+  <div class="comprow2">
+    <div class="card"><h2>航空公司組成</h2><div class="chart-wrap chart-pie"><canvas id="p_airline"></canvas></div></div>
+    <div class="card"><h2>機型組成</h2><div class="chart-wrap chart-pie"><canvas id="p_actype"></canvas></div></div>
+    <div class="card"><h2>目的地分佈（起飛）</h2><div class="chart-wrap chart-pie"><canvas id="p_dest"></canvas></div></div>
+    <div class="card"><h2>來源地分佈（降落）</h2><div class="chart-wrap chart-pie"><canvas id="p_origin"></canvas></div></div>
   </div>
   <p class="chart-note" id="p2popInfo"></p>
 </section>
 
 <section class="panel" id="p6">
   <div class="card" style="margin-bottom:14px">
-    <div class="ctrls" style="margin-bottom:0"><span style="font-size:13px;color:var(--muted)">查詢航空公司（僅貨運）</span><select id="t3sel"></select><span class="mono" id="t3n" style="color:var(--muted);font-size:13px"></span></div>
+    <div class="ctrls" style="margin-bottom:0"><span style="font-size:14px;color:var(--muted)">查詢航空公司（僅貨運）</span><select id="t3sel"></select><span class="mono" id="t3n" style="color:var(--muted);font-size:14px"></span></div>
   </div>
   <div id="t3banner" class="banner3" style="margin-bottom:14px"></div>
-  <div class="comprow2" style="align-items:start">
+  <div class="comprow2">
     <div class="card"><h2>主要機型</h2><p class="desc">該司執飛機型佔比（架次）。</p><div class="chart-wrap chart-sm"><canvas id="t3actypePie"></canvas></div></div>
     <div class="card"><h2>主要航點</h2><p class="desc">各航點架次佔比，由多至少排序。</p><div class="barbox" style="max-height:280px"><div class="barinner"><canvas id="t3peerBar"></canvas></div></div></div>
   </div>
@@ -245,14 +246,19 @@ td.mono{font-family:"IBM Plex Mono"}
     </div>
     <p class="desc" id="t3heatDesc"></p>
     <div class="comprow2" style="align-items:start">
-      <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">起飛 DEP</div><div id="t3heat_DEP"></div><div class="heatlegend" id="t3legend_DEP"></div></div>
-      <div><div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500">降落 ARR</div><div id="t3heat_ARR"></div><div class="heatlegend" id="t3legend_ARR"></div></div>
+      <div><div style="font-size:14px;color:var(--muted);margin-bottom:8px;font-weight:500">起飛 DEP</div><div id="t3heat_DEP"></div><div class="heatlegend" id="t3legend_DEP"></div></div>
+      <div><div style="font-size:14px;color:var(--muted);margin-bottom:8px;font-weight:500">降落 ARR</div><div id="t3heat_ARR"></div><div class="heatlegend" id="t3legend_ARR"></div></div>
     </div>
+  </div>
+  <div class="card" id="t3unmappedCard" style="display:none">
+    <h2>未對應中文名稱的航空公司代碼</h2>
+    <p class="desc">下列代碼有貨機航班紀錄，但在航空公司對照表中查無資料，畫面上只會顯示原始代碼。可將其補進對照表 Google Sheet。</p>
+    <div id="t3unmapped"></div>
   </div>
 </section>
 
 <section class="panel" id="p3">
-  <div class="comprow2" style="align-items:start">
+  <div class="comprow2">
     <div class="card">
       <h2>關鍵延遲與變動指標</h2>
       <p class="desc">母體為已飛貨機航班（status=flown），延遲以中位數呈現；已排除特殊日，代表常態營運狀況。</p>
@@ -349,59 +355,66 @@ td.mono{font-family:"IBM Plex Mono"}
 
 <script>
 /* ================= CONFIG ================= */
+// EXPECT = 該分頁「程式真正會讀到」的欄位；只列必要欄位，Sheet 多出其他欄位不影響。
+// 用途：gviz 查不到指定分頁時不會報錯，而是「安靜地回傳試算表的第一個分頁」，
+// 沒有這道檢查的話分頁一被改名，整頁會照畫但數字全錯。
 const CONFIG = {
+  // *_SELECT：只抓程式會用到的欄位。clean 已累積數萬列，整份抓（select *）約 13MB／50 秒以上，
+  // 只取必要欄位可砍掉約一半。欄位字母若因 Sheet 新增/搬移欄位而錯位，下方 *_EXPECT 的標題比對會擋下來。
   CLEAN_SHEET_ID: '1VYaHv_dwlDSWWMDd38yiXOkcVl1IMIUUHL18s4oHQmU', CLEAN_TAB: 'clean',
+  CLEAN_SELECT: 'B,C,D,F,G,J,K,N,O,P,Q,R',
+  CLEAN_EXPECT: ['Direction','FlightDate','AirlineID','DepartureAirportID','ArrivalAirportID',
+                 'IsCargo','AcType','status','delay_min','actual_date','actual_hour','schedule_hour'],
   FORECAST_SHEET_ID: '1hPp6NfU8yPtooRXQnNV5KLH9X-Mg87rcYmAuYhARohU', FORECAST_TAB: 'forecast',
+  FORECAST_SELECT: 'B,C,D,E,L,M,N,P,Q',
+  FORECAST_EXPECT: ['Direction','forecast_date','day_tag','AirlineID','IsCargo','AcType',
+                    'fc_status','fc_hour','snapshot_time'],
   EVENTS_SHEET_ID: '1AtND3sHGdhblf6EFQboezuWJmFU3BHDkuPcsojsxLAU', EVENTS_TAB: '',
-  // 航空公司對照表尚未上線 Google Sheet 前留空，改用下方 AIRLINE_REF_FALLBACK。
-  // 上線後填入 Sheet ID / 分頁名稱即可自動切換為即時資料，欄位需為：
-  // 順序 / 航空公司代碼 (IATA) / 中文名稱 / 英文名稱 / 主要基地機場 / 樞紐機場 (Hub)
-  AIRLINE_REF_SHEET_ID: '1QfJK23sxxvRt7Ulqiwgyq_pEnEIOnKNbCK8VK79cvZg', AIRLINE_REF_TAB: ''
+  EVENTS_EXPECT: ['日期','事件分類','事件描述','是否排除統計'],
+  // 航空公司對照表：代碼 / 中文名 / 英文名 / 樞紐。讀不到時頁面照常運作，
+  // 僅顯示原始 IATA 代碼並於「航空公司貨機分析」頁底列出未對應清單（不再內建寫死名單）。
+  AIRLINE_REF_SHEET_ID: '1QfJK23sxxvRt7Ulqiwgyq_pEnEIOnKNbCK8VK79cvZg', AIRLINE_REF_TAB: '',
+  AIRLINE_REF_EXPECT: ['航空公司代碼 (IATA)','中文名稱','英文名稱','主要基地機場 / 樞紐機場 (Hub)']
 };
 
-const AIRLINE_REF_FALLBACK = [
-  {code:'CI',zh:'中華航空',en:'China Airlines',hub:'台灣桃園國際機場 (TPE)'},
-  {code:'BR',zh:'長榮航空',en:'EVA Air',hub:'台灣桃園國際機場 (TPE)'},
-  {code:'FX',zh:'聯邦快遞航空',en:'FedEx Express',hub:'曼非斯國際機場 (MEM)、安克拉治國際機場 (ANC)'},
-  {code:'O3',zh:'順豐航空',en:'SF Airlines',hub:'鄂州花湖國際機場 (EHU)、深圳寶安國際機場 (SZX)'},
-  {code:'5X',zh:'美商優比速航空',en:'UPS Airlines',hub:'路易維爾國際機場 (SDF)'},
-  {code:'5Y',zh:'亞特拉斯航空',en:'Atlas Air',hub:'紐約甘迺迪國際機場 (JFK)、安克拉治國際機場 (ANC)、邁阿密國際機場 (MIA)'},
-  {code:'JL',zh:'日本航空',en:'Japan Airlines',hub:'東京成田國際機場 (NRT)、東京羽田國際機場 (HND)'},
-  {code:'3S',zh:'邏輯航空',en:'AeroLogic',hub:'萊比錫/哈雷機場 (LEJ)'},
-  {code:'CX',zh:'國泰航空（國泰貨運）',en:'Cathay Pacific (Cathay Cargo)',hub:'香港國際機場 (HKG)'},
-  {code:'NH',zh:'全日空航空（ANA貨運）',en:'All Nippon Airways (ANA Cargo)',hub:'東京成田國際機場 (NRT)、東京羽田國際機場 (HND)'},
-  {code:'LD',zh:'香港華民航空',en:'Air Hong Kong',hub:'香港國際機場 (HKG)'},
-  {code:'CV',zh:'盧森堡貨運航空',en:'Cargolux',hub:'盧森堡機場 (LUX)'},
-  {code:'CK',zh:'中國貨運航空',en:'China Cargo Airlines',hub:'上海浦東國際機場 (PVG)'},
-  {code:'Y8',zh:'金鵬航空（原揚子江快運）',en:'Suparna Airlines',hub:'上海浦東國際機場 (PVG)、深圳寶安國際機場 (SZX)'},
-  {code:'RH',zh:'香港貨運航空',en:'Hong Kong Air Cargo',hub:'香港國際機場 (HKG)'},
-  {code:'C8',zh:'義大利盧森堡貨運航空',en:'Cargolux Italia',hub:'米蘭馬爾彭薩機場 (MXP)'},
-  {code:'CF',zh:'中國郵政航空',en:'China Postal Airlines',hub:'南京祿口國際機場 (NKG)'},
-  {code:'TK',zh:'土耳其航空（土耳其貨運）',en:'Turkish Airlines (Turkish Cargo)',hub:'伊斯坦堡機場 (IST)'},
-  {code:'SQ',zh:'新加坡航空（新航貨運）',en:'Singapore Airlines (Singapore Cargo)',hub:'新加坡樟宜機場 (SIN)'},
-  {code:'XO',zh:'飛航亞洲航空',en:'XplorAsia Airways',hub:'菲律賓克拉克國際機場 (CRK)'},
-  {code:'N8',zh:'美國國家航空',en:'National Airlines',hub:'奧蘭多桑福德國際機場 (SFB)'},
-  {code:'KZ',zh:'日本貨物航空',en:'Nippon Cargo Airlines (NCA)',hub:'東京成田國際機場 (NRT)'},
-  {code:'EK',zh:'阿聯酋航空（阿聯酋貨運）',en:'Emirates (SkyCargo)',hub:'杜拜國際機場 (DXB)、阿勒馬克圖姆國際機場 (DWC)'},
-  {code:'K4',zh:'卡利塔航空',en:'Kalitta Air',hub:'辛辛那提/北肯塔基國際機場 (CVG)、安克拉治國際機場 (ANC)'},
-  {code:'EY',zh:'阿提哈德航空（阿提哈德貨運）',en:'Etihad Airways (Etihad Cargo)',hub:'阿布達比扎耶德國際機場 (AUH)'},
-  {code:'MH',zh:'馬來西亞航空',en:'Malaysia Airlines',hub:'吉隆坡國際機場(KUL)'}
-];
 
 /* ================= gviz fetch/parse ================= */
 // Google 的 gviz 端點不會回傳 Access-Control-Allow-Origin，瀏覽器端用 fetch() 會被 CORS 擋下（"Failed to fetch"）。
 // 改用 <script> 標籤載入 JSONP（gviz 原生支援 tqx=out:json;responseHandler:NAME），script 標籤不受 CORS 限制。
 let _gvizCbSeq = 0;
-function fetchGviz(sheetId, tabName){
+// Sheet 內容（尤其事件表的「事件描述」是自由輸入）含 < 或 & 時會破版，插進 innerHTML 前一律過這個函式。
+function esc(v){
+  if(v===null||v===undefined) return '';
+  return String(v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function gvizErr(kind, msg){ const e = new Error(msg); e.kind = kind; return e; }
+function fetchGviz(sheetId, tabName, expectCols, selectCols){
   return new Promise((resolve, reject)=>{
     const cbName = '__gvizCb'+(_gvizCbSeq++);
     const script = document.createElement('script');
-    const timer = setTimeout(()=>{ cleanup(); reject(new Error('讀取逾時（'+sheetId+'）')); }, 20000);
-    function cleanup(){ clearTimeout(timer); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
+    const label = tabName ? ('分頁「'+tabName+'」') : '預設（第一個）分頁';
+    // clean 分頁已數萬列、行動網路下載可能超過 30 秒，逾時放寬到 90 秒以免誤判為失敗。
+    const timer = setTimeout(()=>{ cleanup(); reject(gvizErr('network','讀取逾時（超過 90 秒）：'+label+'（'+sheetId+'）')); }, 90000);
+    // 逾時後把 callback 換成 no-op 而不是 delete：慢到的回應仍會執行 __gvizCbN(...)，
+    // 若已刪除會拋出 "not defined" 的未捕捉錯誤，污染 console 也掩蓋真正的問題。
+    function cleanup(){ clearTimeout(timer); window[cbName] = function(){}; if(script.parentNode) script.parentNode.removeChild(script); }
     window[cbName] = (json)=>{
       cleanup();
-      if(json.status === 'error'){ reject(new Error('Sheet 查詢錯誤：'+(json.errors&&json.errors[0]&&json.errors[0].message))); return; }
+      if(json.status === 'error'){
+        reject(gvizErr('query','Sheet 查詢錯誤（'+label+'）：'+(json.errors&&json.errors[0]&&json.errors[0].message)));
+        return;
+      }
       const cols = json.table.cols.map(c=>c.label || c.id);
+      if(expectCols && expectCols.length){
+        const missing = expectCols.filter(c=>cols.indexOf(c)<0);
+        if(missing.length){
+          reject(gvizErr('schema',
+            '讀到的'+label+'欄位不符。\n缺少欄位：'+missing.join('、')+
+            '\n實際讀到：'+(cols.filter(c=>c).join('、')||'（空白）')+
+            '\n最可能的原因是分頁被改名或刪除——gviz 找不到指定分頁時不會報錯，會安靜地回傳第一個分頁。'));
+          return;
+        }
+      }
       const rows = json.table.rows.filter(r=>r).map(r=>{
         const o = {};
         cols.forEach((label,i)=>{ const cell = r.c[i]; o[label] = cell ? gvizVal(cell.v) : null; });
@@ -409,9 +422,12 @@ function fetchGviz(sheetId, tabName){
       });
       resolve(rows);
     };
-    script.onerror = ()=>{ cleanup(); reject(new Error('無法連線 Google Sheet（'+sheetId+'）。請確認該 Sheet 已開啟「知道連結的人可檢視」共用權限。')); };
+    script.onerror = ()=>{ cleanup(); reject(gvizErr('network','無法連線 Google Sheet（'+sheetId+'，'+label+'）')); };
+    // _cb：Google 目前已回 no-store，此參數僅為防堵不遵守快取標頭的 webview／中間代理，確保每日資料一定是最新的。
     script.src = 'https://docs.google.com/spreadsheets/d/'+sheetId+'/gviz/tq?tqx=out:json;responseHandler:'+cbName
-      + (tabName?('&sheet='+encodeURIComponent(tabName)):'');
+      + (tabName?('&sheet='+encodeURIComponent(tabName)):'')
+      + (selectCols?('&tq='+encodeURIComponent('select '+selectCols)):'')
+      + '&_cb='+Date.now();
     document.head.appendChild(script);
   });
 }
@@ -436,34 +452,37 @@ function fmtDateTime(d){
 
 /* ================= data loaders ================= */
 let CLEAN=[], FORECAST=[], EVENTS=[], EVENT_MAP=new Map(), EXCLUDE_SET=new Set(), EXCLUDE_CANCEL_SET=new Set(), AIRLINE_REF=new Map();
+// 各分頁初始化完成前不觸發 redrawTab（draw 函式此時尚未備妥資料/DOM）。
+let READY=false;
 
+// Sheet 內偶有前後空白的髒資料（例：AirlineID 為兩個空白），不 trim 會被當成獨立的航空公司/航點。
+function tidy(v){ return (v===null||v===undefined) ? v : String(v).trim(); }
 async function loadClean(){
-  const rows = await fetchGviz(CONFIG.CLEAN_SHEET_ID, CONFIG.CLEAN_TAB);
+  const rows = await fetchGviz(CONFIG.CLEAN_SHEET_ID, CONFIG.CLEAN_TAB, CONFIG.CLEAN_EXPECT, CONFIG.CLEAN_SELECT);
   return rows.map(r=>({
-    uid:r.UID, dir:r.Direction, airline:r.AirlineID, flightNo:r.FlightNumber,
-    depAp:r.DepartureAirportID, arrAp:r.ArrivalAirportID,
-    isCargo: !!r.IsCargo, acType:r.AcType, status:r.status,
+    dir:tidy(r.Direction), airline:tidy(r.AirlineID),
+    depAp:tidy(r.DepartureAirportID), arrAp:tidy(r.ArrivalAirportID),
+    isCargo: !!r.IsCargo, acType:tidy(r.AcType), status:tidy(r.status),
     delayMin: (r.delay_min===null||r.delay_min===undefined)?null:r.delay_min,
     actualDateStr: toDateStr(r.actual_date),
     flightDateStr: toDateStr(r.FlightDate),
     actualHour: (r.actual_hour===null||r.actual_hour===undefined)?null:Math.round(r.actual_hour),
-    isOvernight: !!r.is_overnight,
     scheduleHour: (r.schedule_hour===null||r.schedule_hour===undefined)?null:Math.round(r.schedule_hour)
   }));
 }
 // flown 列才有 actual_date（真正起降發生才有「實際」）；cancelled/unresolved 一律用 FlightDate（表定日）當日期依據。
 function dateKeyOf(r){ return r.status==='flown' ? r.actualDateStr : r.flightDateStr; }
 async function loadForecast(){
-  const rows = await fetchGviz(CONFIG.FORECAST_SHEET_ID, CONFIG.FORECAST_TAB);
+  const rows = await fetchGviz(CONFIG.FORECAST_SHEET_ID, CONFIG.FORECAST_TAB, CONFIG.FORECAST_EXPECT, CONFIG.FORECAST_SELECT);
   return rows.map(r=>({
-    uid:r.UID, dir:r.Direction, forecastDateStr: toDateStr(r.forecast_date), dayTag: r.day_tag,
-    airline:r.AirlineID, isCargo: !!r.IsCargo, acType:r.AcType, fcStatus:r.fc_status,
+    dir:tidy(r.Direction), forecastDateStr: toDateStr(r.forecast_date), dayTag: tidy(r.day_tag),
+    airline:tidy(r.AirlineID), isCargo: !!r.IsCargo, acType:tidy(r.AcType), fcStatus:tidy(r.fc_status),
     fcHour: (r.fc_hour===null||r.fc_hour===undefined)?null:Math.round(r.fc_hour),
     snapshotTime: r.snapshot_time
   }));
 }
 async function loadEvents(){
-  const rows = await fetchGviz(CONFIG.EVENTS_SHEET_ID, CONFIG.EVENTS_TAB);
+  const rows = await fetchGviz(CONFIG.EVENTS_SHEET_ID, CONFIG.EVENTS_TAB, CONFIG.EVENTS_EXPECT);
   return rows.map(r=>{
     const raw = String(r['是否排除統計']||'').trim();
     // 「是否排除統計」現在有三種值：是（全部排除）／只排除「取消與改期統計」（僅排除取消改期率，其餘照算）／否（僅標記不排除）
@@ -472,27 +491,30 @@ async function loadEvents(){
     return { dateStr: toDateStr(r['日期']), weekday:r['星期'], category:r['事件分類'], desc:r['事件描述'], excludeRaw: raw, excludeAll, excludeCancel };
   }).filter(e=>e.dateStr);
 }
+// 對照表讀不到不阻斷其餘三個 Sheet：回傳空陣列，畫面改顯示原始代碼並在頁底列出未對應清單。
+let AIRLINE_REF_ERROR = null;
 async function loadAirlineRef(){
-  if(!CONFIG.AIRLINE_REF_SHEET_ID) return AIRLINE_REF_FALLBACK;
+  if(!CONFIG.AIRLINE_REF_SHEET_ID){ AIRLINE_REF_ERROR = '未設定 AIRLINE_REF_SHEET_ID'; return []; }
   try{
-    const rows = await fetchGviz(CONFIG.AIRLINE_REF_SHEET_ID, CONFIG.AIRLINE_REF_TAB);
-    const mapped = rows.map(r=>{
-      const vals = Object.values(r);
-      return {
-        code: r['航空公司代碼 (IATA)'] || r['代碼'] || vals[1],
-        zh: r['中文名稱'] || vals[2],
-        en: r['英文名稱'] || vals[3],
-        hub: r['主要基地機場 / 樞紐機場 (Hub)'] || vals[4]
-      };
-    }).filter(x=>x.code);
-    return mapped.length ? mapped : AIRLINE_REF_FALLBACK;
-  }catch(e){ console.warn('航空公司對照表讀取失敗，改用內建資料', e); return AIRLINE_REF_FALLBACK; }
+    const rows = await fetchGviz(CONFIG.AIRLINE_REF_SHEET_ID, CONFIG.AIRLINE_REF_TAB, CONFIG.AIRLINE_REF_EXPECT);
+    return rows.map(r=>({
+      code: r['航空公司代碼 (IATA)'],
+      zh: r['中文名稱'],
+      en: r['英文名稱'],
+      hub: r['主要基地機場 / 樞紐機場 (Hub)']
+    })).filter(x=>x.code);
+  }catch(e){
+    console.warn('航空公司對照表讀取失敗', e);
+    AIRLINE_REF_ERROR = e.message;
+    return [];
+  }
 }
 
 async function init(){
   try{
     const [clean, forecast, events, airlineRefList] = await Promise.all([loadClean(), loadForecast(), loadEvents(), loadAirlineRef()]);
     CLEAN = clean; FORECAST = forecast; EVENTS = events;
+    DATA_FLOOR = computeDataFloor(clean);
     EVENT_MAP = new Map(events.map(e=>[e.dateStr,e]));
     EXCLUDE_SET = new Set(events.filter(e=>e.excludeAll).map(e=>e.dateStr));
     EXCLUDE_CANCEL_SET = new Set(events.filter(e=>e.excludeCancel).map(e=>e.dateStr));
@@ -502,6 +524,7 @@ async function init(){
     renderHeaderStats();
     initNav();
     initTab1(); initTab2(); initTab6(); initTab3(); initTab4(); initTab5();
+    READY=true;
     routeFromHash();
     window.addEventListener('hashchange', routeFromHash);
   }catch(err){
@@ -509,7 +532,13 @@ async function init(){
     document.getElementById('loadingOverlay').style.display='none';
     const b=document.getElementById('errBanner');
     b.style.display='block';
-    b.textContent='資料載入失敗：'+err.message+'（請確認 Google Sheet 已開啟「知道連結者可檢視」的共用權限）';
+    // 依成因給不同指引：欄位不符叫人去改共用權限只會白忙一場。
+    let hint;
+    if(err.kind==='schema') hint = '請開啟該 Google Sheet 確認分頁名稱與欄位標題是否被更動；修正後重新整理即可。';
+    else if(err.kind==='network') hint = '請確認網路連線正常，且該 Sheet 已開啟「知道連結的人可檢視」共用權限（權限不足時會連線失敗）。';
+    else if(err.kind==='query') hint = 'Google 回報查詢錯誤，請確認 Sheet ID 是否正確、檔案是否仍存在。';
+    else hint = '請重新整理再試一次；若持續失敗，請確認 Sheet ID、分頁名稱與共用權限。';
+    b.innerHTML = '<b>資料載入失敗</b><br>'+esc(err.message).replace(/\n/g,'<br>')+'<br><br>'+esc(hint);
   }
 }
 
@@ -534,7 +563,7 @@ function seg(id, cb){
 const barLabelPlugin = {
   id:'barLabel',
   afterDatasetsDraw(chart, args, opts){
-    const {ctx} = chart; ctx.save(); ctx.font='600 12px IBM Plex Mono'; ctx.textBaseline='middle';
+    const {ctx} = chart; ctx.save(); ctx.font='600 14px IBM Plex Mono'; ctx.textBaseline='middle';
     chart.data.datasets.forEach((ds,di)=>{
       if(ds.type==='line') return;
       const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
@@ -549,13 +578,6 @@ const barLabelPlugin = {
   }
 };
 Chart.register(barLabelPlugin);
-function stripePattern(color){
-  const c=document.createElement('canvas'); c.width=8; c.height=8; const x=c.getContext('2d');
-  x.fillStyle=color+'2e'; x.fillRect(0,0,8,8); x.strokeStyle=color; x.lineWidth=1.5;
-  x.beginPath(); x.moveTo(0,8); x.lineTo(8,0); x.moveTo(-2,2); x.lineTo(2,-2); x.moveTo(6,10); x.lineTo(10,6); x.stroke();
-  return x.createPattern(c,'repeat');
-}
-function stripeCss(color){ return 'repeating-linear-gradient(45deg,'+color+'2e,'+color+'2e 3px,'+color+' 3px,'+color+' 4px)'; }
 const fmtNum = v => v.toLocaleString('en-US');
 
 function eventTag(dateStr){ return EVENT_MAP.has(dateStr) ? '⚠' : ''; }
@@ -583,7 +605,15 @@ function isoWeekMonday(year, week){
   return monday;
 }
 
-const DATA_FLOOR = '2026-07-05';
+// 資料起始日由 clean 實際內容推導（載入後於 init 設定），不再寫死。
+// 一定要用 FlightDate 而非 actual_date：跨日航班會讓 actual_date 早一天，
+// 那天只有零星幾筆跨日抵達，是邊界產物而非完整營運日，當成起始日會讓平均值失真。
+let DATA_FLOOR = '2026-07-05';
+function computeDataFloor(rows){
+  let min = null;
+  rows.forEach(r=>{ const d = r.flightDateStr; if(d && (min===null || d<min)) min = d; });
+  return min || DATA_FLOOR;
+}
 let _todayStr = null;
 function todayStr(){ if(!_todayStr) _todayStr = toDateStr(new Date()); return _todayStr; }
 let _availDatesCache = null;
@@ -637,6 +667,21 @@ function setTab(tabId){
   });
   document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active', x.id===tabId));
   document.querySelectorAll('#menuPanel button').forEach(x=>x.classList.toggle('cur', x.dataset.t===tabId));
+  // 圖表若在分頁隱藏時建立，Chart.js 會量到 0×0 且事後 resize() 救不回來，
+  // 因此分頁顯示後直接重畫該分頁的圖表（各 draw 函式都會先 kill 舊圖，可安全重複呼叫）。
+  // 同步重畫（不用 rAF）：分頁的 display 已在上一行切換，Chart.js 量測時瀏覽器會自動重算版面；
+  // 交給 rAF 反而可能延到下一次切換後才執行，屆時該分頁又被隱藏，仍會量到 0。
+  if(READY) redrawTab(tabId);
+}
+function redrawTab(tabId){
+  try{
+    if(tabId==='p1'){ drawT1(); drawWeekly(); drawHeat(); }
+    else if(tabId==='p2'){ drawT2(); }
+    else if(tabId==='p6'){ const s=document.getElementById('t3sel'); if(s && s.value) drawT3(s.value); }
+    else if(tabId==='p3'){ initTab3(); }
+    else if(tabId==='p4'){ fcRedraw(); }
+    else if(tabId==='p5'){ d5_build(); if(curP5Sub==='monthly') d5_renderMonth(); }
+  }catch(e){ console.error('redrawTab failed', tabId, e); }
 }
 function closeMenu(){
   document.getElementById('menuPanel').classList.remove('open');
@@ -647,7 +692,8 @@ function setP5Sub(sub){
   document.querySelectorAll('#p5sub button').forEach(x=>x.classList.toggle('on', x.dataset.v===sub));
   document.querySelectorAll('#p5 .subpanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('p5-'+sub).classList.add('active');
-  if(sub==='monthly') d5_renderMonth();
+  if(!READY) return;
+  if(sub==='monthly') d5_renderMonth(); else if(sub==='daily') d5_build();
 }
 function routeFromHash(){
   const raw = (location.hash||'').replace(/^#/,'');
@@ -745,7 +791,7 @@ function drawBar(id, arr, colorFn){
   CH[id] = new Chart(el, {type:'bar', data:{labels:arr.map(x=>displayLabel(x.k)), datasets:[{data:arr.map(x=>x.v), backgroundColor:cols, borderRadius:2}]},
     options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, barLabel:{horizontal:true}},
-      scales:{x:{grid:{color:'rgba(107,118,131,.1)'}, title:{display:true,text:'架次'}}, y:{grid:{display:false}, ticks:{font:{size:12}, autoSkip:false}}}}});
+      scales:{x:{grid:{color:'rgba(107,118,131,.1)'}, title:{display:true,text:'架次'}}, y:{grid:{display:false}, ticks:{font:{size:14}, autoSkip:false}}}}});
 }
 function drawPie(id, arr, colorFn){
   kill(id);
@@ -753,29 +799,106 @@ function drawPie(id, arr, colorFn){
   const tot = m.reduce((s,x)=>s+x.v,0);
   const cols = m.map(x=> x.k==='其他' ? GREY : (colorFn ? colorFn(x.k) : PIE[0]));
   const labels = m.map(x=>displayLabel(x.k));
+  const items = m.map((x,i)=>({i, v:x.v}));
   CH[id] = new Chart(document.getElementById(id), {type:'doughnut', data:{labels, datasets:[{data:m.map(x=>x.v), backgroundColor:cols, borderColor:'#fffdf8', borderWidth:2}]},
-    options:{responsive:true, maintainAspectRatio:false, cutout:'46%', layout:{padding:46},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'46%', layout:{padding:8},
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.label+' '+c.parsed+' ('+Math.round(100*c.parsed/tot)+'%)'}}}},
-    plugins:[{id:'lbl', afterDraw(c){ drawPieLabels(c, m.map((x,i)=>({i, v:x.v})), tot, labels, 3); }}]});
+    plugins:[piePlugin(items, tot, labels, 3)]});
 }
-// 相鄰扇形角度差過小容易標籤重疊，量測與左右鄰居的夾角，過近才錯開遠近半徑（比單純交錯更準）。
+// ── 圓餅標籤 ────────────────────────────────────────────────────────────────
+// 版面沿用使用者提供的範例：左右各一個固定的「標籤欄」，同側標籤對齊同一條垂直線
+// （左欄右對齊、右欄左對齊），再用「扇形外緣 → 沿角度外推 → 拉到標籤欄」的指引線
+// 連回自己的扇形。之前把標籤散置在各自角度附近，密集小扇形被錯開後就看不出對應關係。
+// 標籤欄要多寬是先量測文字才知道的，所以圓餅半徑由 beforeLayout 反推 layout.padding
+// 決定，而不是寫死——否則窄畫布下長標籤（B747-400 24%）會被裁掉。
+const PIE_WIDE_MIN = 420;   // 畫布夠寬才排成單行「名稱 佔比」，窄畫布改成兩行
+const PIE_ELBOW = 12;       // 指引線沿扇形角度外推的長度
+const PIE_LEAD  = 10;       // 外推點到標籤欄之間的最短水平距離
+const PIE_EDGE  = 4;        // 標籤與畫布邊緣的最小間距
+function pieLabelRows(chart, items, tot, labels, minPct){
+  const ctx = chart.ctx;
+  const wide = chart.width >= PIE_WIDE_MIN;
+  const fs   = wide ? 13 : 12;
+  const NAME = '600 '+fs+'px "IBM Plex Mono",monospace';
+  const PCT  = '400 '+fs+'px "IBM Plex Mono",monospace';
+  const gap  = Math.round(fs*0.5);
+  const rows = []; let maxW = 0;
+  items.forEach(it=>{
+    if(100*it.v/tot < minPct) return;
+    const name = String(labels[it.i]), pct = Math.round(100*it.v/tot)+'%';
+    ctx.font=NAME; const wN = ctx.measureText(name).width;
+    ctx.font=PCT;  const wP = ctx.measureText(pct).width;
+    const w = wide ? wN+gap+wP : Math.max(wN,wP);   // 兩行時欄寬取較寬的那一行
+    if(w>maxW) maxW = w;
+    rows.push({i:it.i, name, pct, wN, wP, w});
+  });
+  return {rows, maxW, wide, fs, gap, NAME, PCT};
+}
+function piePlugin(items, tot, labels, minPct){
+  return {
+    id:'pielbl',
+    // 先替兩側標籤欄留位，剩下的寬度才是圓餅可用的直徑。
+    beforeLayout(c){
+      const m = pieLabelRows(c, items, tot, labels, minPct);
+      const need = m.maxW + PIE_ELBOW + PIE_LEAD + PIE_EDGE;
+      const r = Math.max(52, Math.min((c.height-16)/2, c.width/2 - need));
+      const ph = Math.max(6, c.width/2 - r);
+      c.options.layout.padding = {left:ph, right:ph, top:8, bottom:8};
+    },
+    afterDraw(c){ drawPieLabels(c, items, tot, labels, minPct); }
+  };
+}
 function drawPieLabels(chart, items, tot, labels, minPct){
-  const {ctx}=chart; const meta=chart.getDatasetMeta(0); ctx.save(); ctx.textAlign='center';
-  const visible = items.filter(it=>100*it.v/tot>=minPct).map(it=>({...it, a:(meta.data[it.i].startAngle+meta.data[it.i].endAngle)/2}));
-  const TWO_PI = Math.PI*2;
-  visible.forEach((v,vi)=>{
-    const prev = visible[(vi-1+visible.length)%visible.length];
-    const next = visible[(vi+1)%visible.length];
-    let gapPrev = v.a-prev.a; if(gapPrev<0) gapPrev+=TWO_PI;
-    let gapNext = next.a-v.a; if(gapNext<0) gapNext+=TWO_PI;
-    const crowded = visible.length>1 && Math.min(gapPrev,gapNext) < 0.4;
-    const far = crowded && vi%2===1;
-    const el = meta.data[v.i];
-    const r = el.outerRadius + (far ? 30 : 14);
-    const x=el.x+Math.cos(v.a)*r, y=el.y+Math.sin(v.a)*r;
-    const p = 100*v.v/tot;
-    ctx.font='600 12px IBM Plex Mono'; ctx.fillStyle='#14202e'; ctx.fillText(labels[v.i], x, y-5);
-    ctx.font='400 12px IBM Plex Mono'; ctx.fillStyle=C.muted; ctx.fillText(Math.round(p)+'%', x, y+7);
+  const {ctx} = chart, meta = chart.getDatasetMeta(0);
+  const m = pieLabelRows(chart, items, tot, labels, minPct);
+  if(!m.rows.length) return;
+  ctx.save();
+  // 單行只要一個字高，兩行才需要雙倍；行距必須 >= 標籤自身高度才不會相鄰兩列互壓。
+  const LINE = m.wide ? m.fs+9 : m.fs*2+8;
+  const TOP = LINE/2+2, BOT = chart.height - LINE/2 - 2;
+  const ent = m.rows.map(r=>{
+    const el = meta.data[r.i], a = (el.startAngle+el.endAngle)/2;
+    return Object.assign({}, r, {a, cx:el.x, cy:el.y, or:el.outerRadius,
+      side: Math.cos(a)>=0 ? 1 : -1,
+      y: el.y + Math.sin(a)*(el.outerRadius+PIE_ELBOW)});
+  });
+  [1,-1].forEach(side=>{
+    const g = ent.filter(e=>e.side===side).sort((x,y)=>x.y-y.y);
+    let minY = TOP;                        // 由上往下推開
+    g.forEach(e=>{ e.y = Math.max(e.y, minY); minY = e.y+LINE; });
+    let maxY = BOT;                        // 若擠出下緣，再由下往上回推
+    for(let k=g.length-1;k>=0;k--){ g[k].y = Math.min(g[k].y, maxY); maxY = g[k].y-LINE; }
+  });
+  // 同側共用一個欄位 x（cx/or 全圖一致），標籤自然對齊成一直行。
+  ent.forEach(e=>{
+    e.colX = e.side===1
+      ? Math.min(e.cx+e.or+PIE_ELBOW+PIE_LEAD, chart.width-m.maxW-PIE_EDGE)
+      : Math.max(e.cx-e.or-PIE_ELBOW-PIE_LEAD, m.maxW+PIE_EDGE);
+  });
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(20,32,46,.3)';
+  ent.forEach(e=>{
+    const co = Math.cos(e.a), si = Math.sin(e.a);
+    ctx.beginPath();
+    ctx.moveTo(e.cx+co*(e.or+1), e.cy+si*(e.or+1));
+    ctx.lineTo(e.cx+co*(e.or+PIE_ELBOW), e.cy+si*(e.or+PIE_ELBOW));
+    ctx.lineTo(e.colX-e.side*6, e.y);
+    ctx.stroke();
+  });
+  ctx.textBaseline = 'middle';
+  ent.forEach(e=>{
+    if(m.wide && e.side===1){
+      ctx.textAlign='left';
+      ctx.font=m.NAME; ctx.fillStyle='#14202e'; ctx.fillText(e.name, e.colX, e.y);
+      ctx.font=m.PCT;  ctx.fillStyle=C.muted;   ctx.fillText(e.pct, e.colX+e.wN+m.gap, e.y);
+    } else if(m.wide){
+      ctx.textAlign='right';
+      ctx.font=m.PCT;  ctx.fillStyle=C.muted;   ctx.fillText(e.pct, e.colX, e.y);
+      ctx.font=m.NAME; ctx.fillStyle='#14202e'; ctx.fillText(e.name, e.colX-e.wP-m.gap, e.y);
+    } else {
+      ctx.textAlign = e.side===1 ? 'left' : 'right';
+      ctx.font=m.NAME; ctx.fillStyle='#14202e'; ctx.fillText(e.name, e.colX, e.y-m.fs*0.6);
+      ctx.font=m.PCT;  ctx.fillStyle=C.muted;   ctx.fillText(e.pct,  e.colX, e.y+m.fs*0.7);
+    }
   });
   ctx.restore();
 }
@@ -844,7 +967,7 @@ function drawT1(){
   document.getElementById('t1totals').innerHTML = totalsHtml;
   CH['t1chart'] = new Chart(document.getElementById('t1chart'), {data:{labels:hrs, datasets:ds},
     options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, barLabel:{horizontal:false}},
-      scales:{x:{stacked:true, grid:{display:false}, ticks:{maxRotation:90, minRotation:90, autoSkip:false, font:{size:12}}},
+      scales:{x:{stacked:true, grid:{display:false}, ticks:{maxRotation:90, minRotation:90, autoSkip:false, font:{size:14}}},
         y:{stacked:true, beginAtZero:true, grid:{color:'rgba(107,118,131,.12)'}, title:{display:true,text:'架次'}}}}});
 }
 
@@ -918,7 +1041,7 @@ function renderT1EventNote(){
   const evs = EVENTS.filter(e=>e.dateStr>=DATA_FLOOR);
   const box = document.getElementById('p1eventNote');
   if(!evs.length){ box.style.display='none'; return; }
-  box.innerHTML = '⚠ 特殊事件標記：'+evs.map(e=>e.dateStr.slice(5)+' '+e.category).join('；')
+  box.innerHTML = '⚠ 特殊事件標記：'+evs.map(e=>e.dateStr.slice(5)+' '+esc(e.category)).join('；')
     +'。本頁各圖照實呈現真實架次，事件日僅於日期旁標記；僅「平均架次」等代表常態的統計會排除特殊日。';
 }
 
@@ -1042,10 +1165,10 @@ function airlineHeatMatrix(code, dir, weekKey, routeFilter){
 function drawBanner(al){
   const info = airlineInfo(al);
   document.getElementById('t3banner').innerHTML =
-    '<span style="font-family:\'Space Grotesk\';font-size:24px;font-weight:600;color:var(--amber-lt)">'+al+'</span>'
-    +'<span style="font-size:16px;font-weight:500">'+info.zh+'</span>'
-    +'<span style="font-size:13px;color:#9db3c9">'+info.en+'</span>'
-    +'<span style="font-size:12.5px;color:#9db3c9;margin-left:auto">主要基地／樞紐：'+info.hub+'</span>';
+    '<span style="font-family:\'Space Grotesk\';font-size:24px;font-weight:600;color:var(--amber-lt)">'+esc(al)+'</span>'
+    +'<span style="font-size:16px;font-weight:500">'+esc(info.zh)+'</span>'
+    +'<span style="font-size:14px;color:#9db3c9">'+esc(info.en)+'</span>'
+    +'<span style="font-size:14px;color:#9db3c9;margin-left:auto">主要基地／樞紐：'+esc(info.hub)+'</span>';
 }
 function drawT3(al){
   const rows = CLEAN.filter(r=>r.status==='flown'&&r.isCargo&&r.airline===al);
@@ -1060,7 +1183,7 @@ function drawT3(al){
   const rsel = document.getElementById('t3routeSel');
   const tot = t3cur.peer.reduce((s,x)=>s+x.v,0);
   rsel.innerHTML = '<option value="">全部航點</option>'
-    + t3cur.peer.map(x=>'<option value="'+x.k+'">'+displayLabel(x.k)+'（'+x.v+' 班，'+(tot?Math.round(100*x.v/tot):0)+'%）</option>').join('');
+    + t3cur.peer.map(x=>'<option value="'+esc(x.k)+'">'+esc(displayLabel(x.k))+'（'+x.v+' 班，'+(tot?Math.round(100*x.v/tot):0)+'%）</option>').join('');
   drawT3heat();
 }
 function drawT3heat(){
@@ -1091,9 +1214,22 @@ function initTab6(){
 
   const cargoAirlines = compAirline(true);
   const sel = document.getElementById('t3sel');
-  sel.innerHTML = cargoAirlines.map(a=>'<option value="'+a.k+'">'+a.k+'　'+airlineInfo(a.k).zh+'</option>').join('');
+  sel.innerHTML = cargoAirlines.map(a=>'<option value="'+esc(a.k)+'">'+esc(a.k)+'　'+esc(airlineInfo(a.k).zh)+'</option>').join('');
   sel.onchange = ()=>drawT3(sel.value);
   if(cargoAirlines.length){ sel.value = cargoAirlines[0].k; drawT3(cargoAirlines[0].k); }
+
+  // 對照表若整份讀不到（或個別代碼查無），在此明示，避免「只顯示代碼」被誤當成正常狀態。
+  const unmapped = cargoAirlines.filter(a=>!AIRLINE_REF.has(a.k));
+  const card = document.getElementById('t3unmappedCard');
+  if(unmapped.length){
+    card.style.display='';
+    const warn = AIRLINE_REF_ERROR
+      ? '<div class="warn" style="margin-bottom:12px">⚠ 航空公司對照表整份讀取失敗：'+esc(AIRLINE_REF_ERROR)+'</div>' : '';
+    card.querySelector('#t3unmapped').innerHTML = warn
+      + '<div class="tblwrap"><table><thead><tr><th>代碼</th><th>貨機架次</th></tr></thead><tbody>'
+      + unmapped.map(a=>'<tr><td><b>'+(String(a.k).trim()?esc(a.k):'<span style="color:var(--muted);font-weight:400">（空白代碼）</span>')+'</b></td><td class="mono">'+a.v+'</td></tr>').join('')
+      + '</tbody></table></div>';
+  } else card.style.display='none';
 }
 
 /* ================= TAB 3 貨機延遲分析 ================= */
@@ -1150,9 +1286,9 @@ function drawPieDelay(id, labels, data, cols){
   kill(id);
   const tot = data.reduce((s,x)=>s+x,0);
   CH[id] = new Chart(document.getElementById(id), {type:'doughnut', data:{labels, datasets:[{data, backgroundColor:cols, borderColor:'#fffdf8', borderWidth:2}]},
-    options:{responsive:true, maintainAspectRatio:false, cutout:'46%', layout:{padding:46},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'46%', layout:{padding:8},
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.label+' '+c.parsed+' ('+Math.round(100*c.parsed/tot)+'%)'}}}},
-    plugins:[{id:'l', afterDraw(c){ drawPieLabels(c, data.map((v,i)=>({i, v})), tot, labels, 0); }}]});
+    plugins:[piePlugin(data.map((v,i)=>({i, v})), tot, labels, 0)]});
 }
 function delayKpiCardHTML(title, cls, k){
   return '<div class="delaykpi-card">'
@@ -1185,9 +1321,7 @@ function initTab3(){
     + (excludeAllDates.length ? '：'+excludeAllDates.map(d=>d.slice(5)).join('、') : '') + '）。'
     + '特殊日＝颱風／重大災害／機場關閉等不可預期中斷，排除後方能代表常態營運狀況。';
   if(cancelOnlyDates.length){
-    const ev = evs.find(e=>cancelOnlyDates.includes(e.dateStr)) || {};
-    footer += '<br>「取消或改期」相關數值另外排除 '+cancelOnlyDates.map(d=>d.slice(5)).join('、')
-      + '（'+ev.category+'：'+ev.desc+'），故其母體比延遲統計少 '+cancelOnlyDates.length+' 天；該 '+cancelOnlyDates.length+' 天的架次與延遲資料完好，仍完整納入延遲統計。';
+    footer += '<br>「取消或改期」相關數值另外排除 '+cancelOnlyDates.map(d=>d.slice(5)).join('、')+'（資料異常，無法當日取消或改期資料）。';
   }
   box.innerHTML = footer;
 
@@ -1203,10 +1337,10 @@ function initTab3(){
   let body = list.map(al=>{
     const tot = al.counts.reduce((s,x)=>s+x,0) || 1;
     const info = airlineInfo(al.airline);
-    return '<tr><td><b>'+al.airline+'</b></td><td style="font-size:12px;color:var(--muted)">'+info.en+'</td>'
+    return '<tr><td><b>'+esc(al.airline)+'</b></td><td style="font-size:14px;color:var(--muted)">'+esc(info.en)+'</td>'
       +'<td class="mono">'+al.median+'</td>'
-      + al.counts.map(c=>'<td class="mono" style="font-weight:600;color:var(--ink)">'+Math.round(100*c/tot)+'%<span style="color:var(--muted);font-size:12px;font-weight:400"> ('+c+')</span></td>').join('')
-      + '<td class="mono" style="font-weight:600;color:var(--ink)">'+al.cancelPct+'%<span style="color:var(--muted);font-size:12px;font-weight:400"> ('+al.cancelN+')</span></td>'
+      + al.counts.map(c=>'<td class="mono" style="font-weight:600;color:var(--ink)">'+Math.round(100*c/tot)+'%<span style="color:var(--muted);font-size:14px;font-weight:400"> ('+c+')</span></td>').join('')
+      + '<td class="mono" style="font-weight:600;color:var(--ink)">'+al.cancelPct+'%<span style="color:var(--muted);font-size:14px;font-weight:400"> ('+al.cancelN+')</span></td>'
       + '<td class="mono">'+al.n+'</td></tr>';
   }).join('');
   tb.innerHTML = head + body + '</tbody>';
@@ -1216,11 +1350,6 @@ function initTab3(){
 let fcSel = {cat:'cargo', dir:'both'};
 function fcCatList(){ return fcSel.cat==='all' ? ['cargo','pax'] : [fcSel.cat]; }
 function fcDirList(){ return fcSel.dir==='both' ? ['DEP','ARR'] : [fcSel.dir]; }
-function scopeLabel(){
-  const c = fcSel.cat==='cargo'?'貨運':(fcSel.cat==='pax'?'客運':'客貨全部');
-  const d = fcSel.dir==='both'?'起降':(fcSel.dir==='DEP'?'起飛':'降落');
-  return c+'·'+d;
-}
 // 圖例文字直接寫出目前檢視內容（如「貨運預期起飛」「客貨實際起降」），不用再對照篩選鈕。
 function catPrefix(){ return fcSel.cat==='cargo'?'貨運':(fcSel.cat==='pax'?'客運':'客貨'); }
 function dirWord(dir){ return dir==='DEP'?'起飛':'降落'; }
@@ -1234,6 +1363,17 @@ function schedHourOf(r){
 }
 function forecastDateOf(tag){ const r = FORECAST.find(x=>x.dayTag===tag); return r ? r.forecastDateStr : null; }
 
+// 昨日回顧與今日/明日三張圖的 24 小時堆疊長條設定完全相同，集中在此以免改樣式要改多處。
+function hourlyStackOpts(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{callbacks:{title:it=>it[0].label+':00'}}},
+    scales:{
+      x:{stacked:true, grid:{display:false}, ticks:{maxRotation:0, autoSkip:false, callback:(v,i)=>i%2==0?hrs[i]:''}},
+      y:{stacked:true, beginAtZero:true, grid:{color:'rgba(107,118,131,.12)'}, title:{display:true,text:'架次'}}
+    }
+  };
+}
 function drawYst(){
   kill('ystChart');
   const Ddate = forecastDateOf('D');
@@ -1257,9 +1397,7 @@ function drawYst(){
   ystRows.forEach(r=>{ if(r.status!=='flown'||r.actualHour==null) return; if(!dirs.includes(r.dir)) return; act[r.actualHour]++; });
   ds.push({type:'line', label:'實際起降', data:act, borderColor:C.red, backgroundColor:C.red, borderWidth:2, pointRadius:1.5, tension:.35, order:1});
   CH['ystChart'] = new Chart(document.getElementById('ystChart'), {data:{labels:hrs, datasets:ds},
-    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{title:it=>it[0].label+':00'}}},
-      scales:{x:{stacked:true, grid:{display:false}, ticks:{maxRotation:0, autoSkip:false, callback:(v,i)=>i%2==0?hrs[i]:''}},
-        y:{stacked:true, beginAtZero:true, grid:{color:'rgba(107,118,131,.12)'}, title:{display:true,text:'架次'}}}}});
+    options: hourlyStackOpts()});
   const pfx = catPrefix();
   let lg = dirs.map(dir=>'<span><i style="background:'+(dir==='ARR'?C.cargoArr:C.cargoDep)+'"></i>'+pfx+'預期'+dirWord(dir)+'</span>').join('');
   lg += '<span><i style="background:'+C.red+'"></i>'+pfx+'實際'+(fcSel.dir==='both'?'起降':dirWord(fcSel.dir))+'</span>';
@@ -1319,9 +1457,7 @@ function drawFuture(canvasId, legendId, kpiId, titleId, dayTag){
   const wk = cleanActualHourly(wkDate, cats, dirs);
   ds.push({type:'line', label:'上週同星期', data:wk, borderColor:C.amber, backgroundColor:C.amber, borderWidth:2, pointRadius:1.5, tension:.35, order:1});
   CH[canvasId] = new Chart(document.getElementById(canvasId), {data:{labels:hrs, datasets:ds},
-    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{title:it=>it[0].label+':00'}}},
-      scales:{x:{stacked:true, grid:{display:false}, ticks:{maxRotation:0, autoSkip:false, callback:(v,i)=>i%2==0?hrs[i]:''}},
-        y:{stacked:true, beginAtZero:true, grid:{color:'rgba(107,118,131,.12)'}, title:{display:true,text:'架次'}}}}});
+    options: hourlyStackOpts()});
   let lg = dirs.map(dir=>'<span><i style="background:'+(dir==='ARR'?C.cargoArr:C.cargoDep)+'"></i>'+pfx+'預期'+dirWord(dir)+'</span>').join('');
   lg += '<span><i style="background:'+C.amber+'"></i>'+pfx+'上週同星期實際（'+(wkDate||'–')+'）</span>';
   document.getElementById(legendId).innerHTML = lg;
@@ -1446,7 +1582,7 @@ function d5_bar(data,label,color,axis){ return {type:'bar',label,data,background
 function d5_line(data,label,color,axis,fill){ return {type:'line',label,data,borderColor:color,backgroundColor:color+'55',borderWidth:2,pointRadius:0,tension:.35,yAxisID:axis||'y',fill:fill||false,order:1}; }
 function d5_AR(data,label,color,fillTo){ return {type:'line',label,data,borderColor:color,backgroundColor:color+'99',borderWidth:1.5,pointRadius:0,tension:.35,fill:fillTo,order:1}; }
 const d5_dualAxis={y:{position:'left',title:{display:true,text:'架次'},grid:{color:'rgba(107,118,131,.12)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'噸/hr'}}};
-const d5_baseOpt = ex => ({responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{legend:{labels:{boxWidth:12,font:{size:12}}}}, scales:ex});
+const d5_baseOpt = ex => ({responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{legend:{labels:{boxWidth:12,font:{size:14}}}}, scales:ex});
 function d5_mk(id, cfg){ kill(id); CH[id]=new Chart(document.getElementById(id), cfg); }
 // 貨機沿用 cargoDep/cargoArr（深藍/淺藍），客機沿用 paxDep/paxArr（深綠/淺綠），跟全站配色一致。
 const D5C = {fArr:C.cargoArr, fDep:C.cargoDep, pArr:C.paxArr, pDep:C.paxDep, exp:C.amber, imp:C.navy, vbar:GREY, frt:C.cargoDep, pax:C.paxDep};
@@ -1521,6 +1657,8 @@ function d5_setCat(cat){
   d5_cat = cat;
   document.querySelectorAll('#d5cat button').forEach(x=>x.classList.toggle('on', x.dataset.v===cat));
   ['frt','pax','comb'].forEach(c=>{ document.getElementById('d5-'+c).style.display = (c===cat) ? '' : 'none'; });
+  // 未顯示的檢視在建立時量到 0×0，切過來後需重畫（READY 前由 initTab5 自行首繪）。
+  if(READY) d5_build();
 }
 function initTab5(){
   const dates = availableDates();
