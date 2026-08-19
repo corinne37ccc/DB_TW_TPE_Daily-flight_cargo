@@ -275,12 +275,12 @@ select{
   <div class="navrow">
     <button class="menubtn" id="menubtn" aria-expanded="false" aria-controls="menu">☰ 目錄</button>
     <nav id="nav" role="tablist">
-      <button role="tab" data-tab="t4" aria-selected="true">每日航班預報</button>
-      <button role="tab" data-tab="t1" aria-selected="false">起降架次統計</button>
-      <button role="tab" data-tab="t2" aria-selected="false">航班組成分析</button>
-      <button role="tab" data-tab="t6" aria-selected="false">航空公司貨機分析</button>
-      <button role="tab" data-tab="t3" aria-selected="false">貨機延遲分析</button>
-      <button role="tab" data-tab="t5" aria-selected="false">貨量與車流推估</button>
+      <button role="tab" id="tab-t4" aria-controls="t4" data-tab="t4" aria-selected="true">每日航班預報</button>
+      <button role="tab" id="tab-t1" aria-controls="t1" data-tab="t1" aria-selected="false">起降架次統計</button>
+      <button role="tab" id="tab-t2" aria-controls="t2" data-tab="t2" aria-selected="false">航班組成分析</button>
+      <button role="tab" id="tab-t6" aria-controls="t6" data-tab="t6" aria-selected="false">航空公司貨機分析</button>
+      <button role="tab" id="tab-t3" aria-controls="t3" data-tab="t3" aria-selected="false">貨機延遲分析</button>
+      <button role="tab" id="tab-t5" aria-controls="t5" data-tab="t5" aria-selected="false">貨量與車流推估</button>
     </nav>
   </div>
   <div class="menu" id="menu" hidden></div>
@@ -292,7 +292,7 @@ select{
 <main id="main" hidden>
 
   <!-- ========================= 起降架次統計 ========================= -->
-  <section class="panel" id="t1">
+  <section class="panel" id="t1" role="tabpanel" aria-labelledby="tab-t1">
     <div class="card">
       <div class="ctitle"><h2>每日分時起降架次</h2><span class="tag">實際起降</span></div>
       <div class="ctrls">
@@ -338,7 +338,7 @@ select{
   </section>
 
   <!-- ========================= 航班組成分析 ========================= -->
-  <section class="panel" id="t2">
+  <section class="panel" id="t2" role="tabpanel" aria-labelledby="tab-t2">
     <div class="card">
       <div class="ctitle"><h2>航班組成分析</h2></div>
       <p class="chint">圓餅圖佔比 ≥3% 獨立呈現，&lt;3% 併入「其他」。
@@ -371,7 +371,7 @@ select{
   </section>
 
   <!-- ========================= 航空公司貨機分析 ========================= -->
-  <section class="panel" id="t6">
+  <section class="panel" id="t6" role="tabpanel" aria-labelledby="tab-t6">
     <div class="card">
       <div class="ctitle"><h2>航空公司貨機分析</h2><span class="tag">僅貨機</span></div>
       <div class="ctrls" style="margin:10px 0 0">
@@ -405,7 +405,7 @@ select{
   </section>
 
   <!-- ========================= 貨機延遲分析 ========================= -->
-  <section class="panel" id="t3">
+  <section class="panel" id="t3" role="tabpanel" aria-labelledby="tab-t3">
     <div class="grid2">
       <div class="card" style="margin:0">
         <div class="ctitle"><h2>關鍵延遲與變動指標</h2><span class="tag">排除特殊日</span></div>
@@ -426,7 +426,7 @@ select{
   </section>
 
   <!-- ========================= 每日航班預報 ========================= -->
-  <section class="panel on" id="t4">
+  <section class="panel on" id="t4" role="tabpanel" aria-labelledby="tab-t4">
     <div class="card">
       <div class="ctrls" style="margin:0">
         <div class="seg" id="t4-kind"></div>
@@ -459,7 +459,7 @@ select{
   </section>
 
   <!-- ========================= 衍生貨量推估 ========================= -->
-  <section class="panel" id="t5">
+  <section class="panel" id="t5" role="tabpanel" aria-labelledby="tab-t5">
     <div class="card">
       <div class="ctitle"><h2>貨量與車流推估</h2><span class="tag">全頁為推估值</span></div>
       <p class="chint">未能取得每班機實際載貨量，故以航班資料推估每日衍生貨量與貨運車流，
@@ -580,6 +580,8 @@ select{
    CONFIG — 更換 Sheet 只需改這裡
    ================================================================ */
 const CFG = {
+  // 讀取逾時。clean 分頁目前約 13MB 且每日成長，行動網路上偏短的逾時會誤判為失敗。
+  timeoutMs: 30000,
   sheets: {
     clean: {
       id: '1VYaHv_dwlDSWWMDd38yiXOkcVl1IMIUUHL18s4oHQmU', tab: 'clean',
@@ -685,18 +687,81 @@ const binOf = dm => CFG.bins.findIndex(b => dm <= b.max);
 /* ================================================================
    讀取層
    ================================================================ */
+/**
+ * gviz 網址。handler 有值時要求 gviz 以 JSONP 包裝回應。
+ * `_cb` 為防快取參數，兩條傳輸路徑都需要 —— JSONP 走 <script> 一樣吃瀏覽器快取，
+ * 少了它可能整天讀到早上的舊資料。
+ */
+function gvizUrl(c, handler){
+  return 'https://docs.google.com/spreadsheets/d/' + c.id +
+         '/gviz/tq?tqx=out:json' + (handler ? ';responseHandler:' + handler : '') +
+         (c.tab ? '&sheet=' + encodeURIComponent(c.tab) : '') +
+         '&_cb=' + Date.now();
+}
+
+/**
+ * http(s) 用 fetch。相較 JSONP 多兩項診斷能力，故正式路徑優先走這裡：
+ *   · HTTP 狀態碼
+ *   · 「回應不是 setResponse(...) 格式」→ Sheet 未公開共用（回的是登入頁 HTML）
+ */
+async function gvizFetch(key, c){
+  const ctl = new AbortController();
+  const tm  = setTimeout(() => ctl.abort(), CFG.timeoutMs);
+  let txt;
+  try {
+    const res = await fetch(gvizUrl(c, null), { cache:'no-store', signal: ctl.signal });
+    if (!res.ok) throw new Error(key + '：HTTP ' + res.status);
+    txt = await res.text();
+  } catch (e){
+    // abort 的 DOMException 訊息是「The user aborted a request」，對使用者毫無意義
+    if (e.name === 'AbortError')
+      throw new Error(key + '：讀取逾時（超過 ' + Math.round(CFG.timeoutMs/1000) + ' 秒）');
+    throw e;
+  } finally {
+    clearTimeout(tm);
+  }
+  const m = txt.match(/setResponse\(([\s\S]*)\);?\s*$/);
+  if (!m) throw new Error(key + '：回應格式非預期（Sheet 可能未公開共用）');
+  return JSON.parse(m[1]);
+}
+
+/**
+ * file:// 用 JSONP。<script> 標籤不受同源政策限制，故雙擊 HTML 直接開啟也讀得到資料。
+ *
+ * 代價：Sheet 未公開時 gviz 回的是登入頁 HTML，<script> 會「載入成功但解析失敗」，
+ * 而解析錯誤不會觸發 onerror —— 只能等到逾時。故此路徑分不出「連不上」與「沒權限」，
+ * fatal() 於 file:// 下的說明已據此改寫。
+ */
+let JSONP_SEQ = 0;
+function gvizJsonp(key, c){
+  return new Promise((resolve, reject) => {
+    const cb = '__gviz_cb_' + (++JSONP_SEQ);
+    const s  = document.createElement('script');
+    let done = false;
+    // 逾時與 callback 可能都會觸發，且 script 移除後 onerror 仍可能在途中 —— 一律只認第一次
+    const cleanup = () => {
+      done = true;
+      clearTimeout(tm);
+      delete window[cb];
+      if (s.parentNode) s.remove();
+    };
+    const tm = setTimeout(() => {
+      if (done) return;
+      cleanup();
+      reject(new Error(key + '：讀取逾時（超過 ' + Math.round(CFG.timeoutMs/1000) +
+                       ' 秒）。可能是網路問題，或該 Sheet 未設為公開共用。'));
+    }, CFG.timeoutMs);
+    window[cb] = json => { if (done) return; cleanup(); resolve(json); };
+    s.onerror = () => { if (done) return; cleanup(); reject(new Error(key + '：無法載入資料（網路失敗）')); };
+    s.src = gvizUrl(c, cb);
+    document.head.appendChild(s);
+  });
+}
+
 async function gviz(key){
   const c = CFG.sheets[key];
   if (!c || !c.id) return null;
-  const url = 'https://docs.google.com/spreadsheets/d/' + c.id +
-              '/gviz/tq?tqx=out:json' + (c.tab ? '&sheet=' + encodeURIComponent(c.tab) : '') +
-              '&_cb=' + Date.now();          // 避開瀏覽器快取，確保拿到當日資料
-  const res = await fetch(url, { cache:'no-store' });
-  if (!res.ok) throw new Error(key + '：HTTP ' + res.status);
-  const txt = await res.text();
-  const m = txt.match(/setResponse\(([\s\S]*)\);?\s*$/);
-  if (!m) throw new Error(key + '：回應格式非預期（Sheet 可能未公開共用）');
-  const j = JSON.parse(m[1]);
+  const j = location.protocol === 'file:' ? await gvizJsonp(key, c) : await gvizFetch(key, c);
   if (j.status !== 'ok') throw new Error(key + '：' + ((j.errors||[]).map(e=>e.detailed_message||e.message).join('；') || '查詢失敗'));
 
   const labels = j.table.cols.map(x => x.label);
@@ -956,11 +1021,16 @@ function barChart(host, o){
         const v = s.data[i] || 0;
         if (!v) return;
         const h = (v / max) * ih;
-        svg.appendChild(el('rect', {
+        const bar = el('rect', {
           x: ml + i*bw + pad, y: y(acc) - h, width: Math.max(1, bw - pad*2), height: h,
           fill: fillOf(s, si, ns), stroke: s.hatch ? s.color : 'none', 'stroke-width': s.hatch ? 1.2 : 0,
           rx: 1.5
-        }));
+        });
+        // 原生 tooltip：長條窄到放不下數字時，滑鼠停留仍讀得到（手機無 hover，不受影響）。
+        // 週檢視的 X 軸分兩行（星期／日期），兩行都要帶進來才辨識得出是哪一天。
+        bar.appendChild(el('title', {},
+          `${c.label}${c.label2 ? ' ' + c.label2 : ''}　${s.name} ${fmtInt(v)}`));
+        svg.appendChild(bar);
         acc += v;
       });
       if (o.showValues && totals[i] > 0 && bw > 17)
@@ -1037,7 +1107,10 @@ function hbarChart(host, items, o){
       svg.appendChild(el('text', { x:lw-7, y:yy+bh/2+5, 'text-anchor':'end', 'font-size':15,
                                    fill:'#1c1f23' }, d.label));
       const w = Math.max(1, (d.value/max) * iw);
-      svg.appendChild(el('rect', { x:lw, y:yy, width:w, height:bh, fill:d.color, rx:2 }));
+      const bar = el('rect', { x:lw, y:yy, width:w, height:bh, fill:d.color, rx:2 });
+      // 標籤欄寬有上限，長標籤會被截斷 —— tooltip 補回完整名稱
+      bar.appendChild(el('title', {}, `${d.label}　${valTxt(d)}`));
+      svg.appendChild(bar);
       // 數值標於長條尾端
       svg.appendChild(el('text', { x:lw+w+5, y:yy+bh/2+5, 'font-size':14,
                                    'font-weight':650, fill:'#5b6470' }, valTxt(d)));
@@ -1084,10 +1157,13 @@ function pieChart(host, items, o){
       const big = (a1-a0) > Math.PI ? 1 : 0;
       const p = (r,a) => [cx + r*Math.cos(a), cy + r*Math.sin(a)];
       const [x0,y0] = p(R,a0), [x1,y1] = p(R,a1);
-      svg.appendChild(el('path', {
+      const seg = el('path', {
         d: `M${cx},${cy}L${x0.toFixed(1)},${y0.toFixed(1)}A${R},${R} 0 ${big} 1 ${x1.toFixed(1)},${y1.toFixed(1)}Z`,
         fill: d.color, stroke:'#fff', 'stroke-width':1.5
-      }));
+      });
+      // 圖面只標百分比，實際筆數改由 tooltip 提供
+      seg.appendChild(el('title', {}, `${d.label}　${fmtInt(d.value)}（${(frac*100).toFixed(1)}%）`));
+      svg.appendChild(seg);
       labs.push({ mid, d, pct: frac*100 });
       a0 = a1;
     });
@@ -2433,21 +2509,22 @@ function drawT5Month(){
    ================================================================ */
 /**
  * 失敗訊息必須指向真正的成因。
- * 「Failed to fetch」在 file:// 下幾乎必然是來源為 null 被 CORS 擋掉，與共用設定無關 ——
- * 若一律叫使用者去檢查共用設定，會把人帶往錯的方向。
+ * file:// 走 JSONP，網路失敗與「Sheet 未公開」兩者都只會表現為逾時（見 gvizJsonp），
+ * 故該模式下不宜斷言成因，只能並列兩種可能並指出如何取得明確訊息。
  */
 function fatal(msg){
   const isFile  = location.protocol === 'file:';
-  const netFail = /Failed to fetch|NetworkError|Load failed/i.test(msg);
+  const netFail = /Failed to fetch|NetworkError|Load failed|逾時|網路失敗/i.test(msg);
   let hint;
   if (isFile && netFail){
-    hint = `<b>成因：這個頁面是用 <code>file://</code> 直接開啟的。</b><br>
-      瀏覽器會把本機檔案的來源視為 <code>null</code>，Google 不會對它發出跨域許可，
-      因此讀不到 Sheet。<b>這與共用設定無關，改權限沒有用。</b><br><br>
-      <b>解法一（正式）</b>：部署到 GitHub Pages，用 https 網址開啟。<br>
-      <b>解法二（本機預覽）</b>：在這個資料夾執行
-      <code>python3 -m http.server 8000</code>，再開
-      <code>http://localhost:8000</code>。`;
+    hint = `這個頁面是用 <code>file://</code> 直接開啟的，此模式下<b>無法分辨
+      「連不上 Google」與「Sheet 未公開共用」</b>，兩者都會呈現為逾時。<br><br>
+      <b>請依序確認</b>：<br>
+      1. 網路是否正常。<br>
+      2. 四個 Sheet 的共用設定是否為「知道連結的任何人 → 檢視者」。<br><br>
+      若要取得明確的錯誤訊息，改用本機伺服器開啟：在這個資料夾執行
+      <code>python3 -m http.server 8000 --bind 127.0.0.1</code>，
+      再開 <code>http://localhost:8000</code>。`;
   } else if (netFail){
     hint = `無法連線到 Google。請確認網路，並確認四個 Sheet 的共用設定為
       「知道連結的任何人 → 檢視者」。`;
