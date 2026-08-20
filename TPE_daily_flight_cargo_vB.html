@@ -119,6 +119,23 @@ select{
    ============================================================ */
 .chart{width:100%;overflow:hidden}
 .chart svg{display:block;max-width:100%}
+
+/* ------------------------------------------------------------
+   自訂 tooltip：position:fixed 掛在 <body>，才不會被 .chart 的
+   overflow:hidden 裁掉，也不受圖表重繪影響。
+   ------------------------------------------------------------ */
+.tip{position:fixed;z-index:9999;pointer-events:none;display:none;
+     background:rgba(23,27,33,.94);color:#fff;border-radius:10px;padding:9px 11px;
+     font-size:13.5px;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:76vw}
+.tip-h{font-weight:700;font-size:14.5px;margin-bottom:5px}
+.tip-h em{font-style:normal;color:#fbbf24;font-weight:600;margin-left:4px}
+.tip-r{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.tip-r i{width:11px;height:11px;border-radius:2px;flex:0 0 auto}
+.tip-r i.ln{height:3px;border-radius:2px}
+.tip-r span{flex:1 1 auto;color:#cbd5e1}
+.tip-r b{font-variant-numeric:tabular-nums;font-weight:700;margin-left:16px}
+.tip-r.tot{margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.22)}
+.tip-r.tot span{color:#fff;font-weight:600;padding-left:18px}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .scrolly{overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* 圖例一律置於圖的上方 */
@@ -938,9 +955,49 @@ function redraw(host){
 }
 let rt;
 addEventListener('resize', () => {
+  tipHide();
   clearTimeout(rt);
   rt = setTimeout(() => REG.forEach(h => { if (h.isConnected && h.offsetParent) redraw(h); }), 140);
 });
+
+/* ================================================================
+   自訂 tooltip（全站單例）
+
+   為什麼不用 SVG 原生 <title>：觸控裝置完全不觸發，且一次只吐出一個
+   元素的值，讀不到同一欄的其他數列與合計；折線的資料點只有 2.4px，
+   手指也點不中。改為「整欄命中 + 自繪泡泡」後三者一次解決。
+
+   DOM 掛在 <body> 而非圖表容器內：redraw() 會清空 host.innerHTML，
+   放在裡面的話一縮放視窗就消失。
+   ================================================================ */
+const TIP = document.createElement('div');
+TIP.className = 'tip';
+document.body.appendChild(TIP);
+let TIP_HL = null;                          // 目前亮起的欄位底色
+
+function tipHide(){
+  TIP.style.display = 'none';
+  if (TIP_HL){ TIP_HL.setAttribute('opacity', 0); TIP_HL = null; }
+}
+/**
+ * @param touch 觸控時泡泡改置於觸點「上方」並置中，否則會被手指整個蓋住。
+ */
+function tipShow(html, cx, cy, touch){
+  TIP.innerHTML = html;
+  TIP.style.display = 'block';
+  TIP.style.left = '0px'; TIP.style.top = '0px';       // 先歸零再量，避免沿用舊位置撐寬
+  const r = TIP.getBoundingClientRect(), M = 8;
+  let x = touch ? cx - r.width/2 : cx + 14;
+  let y = touch ? cy - r.height - 22 : cy + 16;
+  if (y < M) y = touch ? cy + 26 : M;                   // 上方放不下就翻到下方
+  if (y + r.height > innerHeight - M) y = innerHeight - r.height - M;
+  x = Math.max(M, Math.min(x, innerWidth - r.width - M));
+  TIP.style.left = x + 'px';
+  TIP.style.top  = y + 'px';
+}
+// 捲動或點空白處即關閉（capture 才收得到內層捲動容器的事件）
+addEventListener('scroll', tipHide, true);
+document.addEventListener('pointerdown', tipHide);
 
 /**
  * 量測文字寬度，用來替標籤保留空間（避免 B747-400 被切成 747-400）。
@@ -1013,6 +1070,11 @@ function barChart(host, o){
                         String(Math.round(v))));
     }
 
+    // 命中回饋層：插在格線之後、長條之前，亮起時不會蓋住任何資料
+    const hl = el('rect', { x:ml, y:mt, width:Math.max(1,bw), height:ih,
+                            fill:'#0f172a', opacity:0, rx:2 });
+    svg.appendChild(hl);
+
     // 堆疊長條
     const pad = Math.min(3, bw * 0.16);
     o.cats.forEach((c, i) => {
@@ -1026,10 +1088,8 @@ function barChart(host, o){
           fill: fillOf(s, si, ns), stroke: s.hatch ? s.color : 'none', 'stroke-width': s.hatch ? 1.2 : 0,
           rx: 1.5
         });
-        // 原生 tooltip：長條窄到放不下數字時，滑鼠停留仍讀得到（手機無 hover，不受影響）。
-        // 週檢視的 X 軸分兩行（星期／日期），兩行都要帶進來才辨識得出是哪一天。
-        bar.appendChild(el('title', {},
-          `${c.label}${c.label2 ? ' ' + c.label2 : ''}　${s.name} ${fmtInt(v)}`));
+        // 此處刻意不掛原生 <title>：已改用整欄命中的自訂 tooltip，
+        // 兩者並存會在桌機停留約一秒後再跳一層系統提示，疊在一起。
         svg.appendChild(bar);
         acc += v;
       });
@@ -1073,6 +1133,50 @@ function barChart(host, o){
     if (o.xTitle)
       svg.appendChild(el('text', { x: ml + iw/2, y: H-4, 'text-anchor':'middle',
                                    'font-size':14, 'font-weight':600, fill:'#5b6470' }, o.xTitle));
+
+    /* ── 互動：整欄命中 ────────────────────────────────────────
+       命中對象是整個 x 欄位而非個別長條。長條在 31 日檢視下每欄僅十餘 px，
+       堆疊後每段更窄，折線點更只有 2.4px，逐元素命中在觸控上點不中。 */
+    const tipHTML = i => {
+      const c = o.cats[i], rows = [];
+      o.series.forEach(s => { const v = s.data[i]; if (v) rows.push({ n:s.name, c:s.color, v }); });
+      (o.lines||[]).forEach(L => {
+        const v = L.data[i]; if (v != null) rows.push({ n:L.name, c:L.color, v, line:true });
+      });
+      if (!rows.length) return null;
+      let h = `<div class="tip-h">${esc(c.label)}${c.label2 ? ' ' + esc(c.label2) : ''}` +
+              `${c.mark ? `<em>${esc(c.mark)}</em>` : ''}</div>`;
+      h += rows.map(r => `<div class="tip-r"><i class="${r.line?'ln':''}" style="background:${r.c}"></i>` +
+                         `<span>${esc(r.n)}</span><b>${fmtInt(r.v)}</b></div>`).join('');
+      // 單一數列時長條本身即為合計，再列一行會重複
+      if (o.series.length > 1)
+        h += `<div class="tip-r tot"><span>合計</span><b>${fmtInt(totals[i])}</b></div>`;
+      return h;
+    };
+    let last = -1;
+    const hit = ev => {
+      // 以 getBoundingClientRect 換算比例：SVG 受 max-width:100% 縮放時仍對得準
+      const r = svg.getBoundingClientRect();
+      const i = Math.floor(((ev.clientX - r.left) * (W / (r.width || W)) - ml) / bw);
+      const h = (i < 0 || i >= n) ? null : tipHTML(i);
+      if (!h){ last = -1; tipHide(); return; }
+      if (i !== last || TIP_HL !== hl){          // 同一欄內移動只挪位置，不重建內容
+        last = i;
+        if (TIP_HL && TIP_HL !== hl) TIP_HL.setAttribute('opacity', 0);
+        hl.setAttribute('x', ml + i*bw);
+        hl.setAttribute('opacity', 0.07);
+        TIP_HL = hl;
+      }
+      tipShow(h, ev.clientX, ev.clientY, ev.pointerType !== 'mouse');
+    };
+    svg.style.touchAction = 'pan-y';                       // 觸控仍可垂直捲頁
+    svg.addEventListener('pointermove',  ev => { if (ev.pointerType === 'mouse') hit(ev); });
+    svg.addEventListener('pointerleave', ev => { if (ev.pointerType === 'mouse') tipHide(); });
+    // 觸控只在按下時命中，不追蹤滑動，否則會與捲頁互搶手勢。
+    // stopPropagation 讓 document 上的「點空白處關閉」不會立刻把剛開的泡泡關掉。
+    svg.addEventListener('pointerdown',  ev => {
+      if (ev.pointerType !== 'mouse'){ ev.stopPropagation(); hit(ev); }
+    });
     return svg;
   });
 }
